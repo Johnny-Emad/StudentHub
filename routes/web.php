@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\TeacherApprovalController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,8 +18,18 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'admin'])->group(function () {
-    // Admin routes
-});
+
+Route::middleware(['auth', 'admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        Route::get('/teachers', [TeacherApprovalController::class, 'index'])
+            ->name('teachers.index');
+
+        Route::patch('/teachers/{user}/{status}', [TeacherApprovalController::class, 'update'])
+            ->whereIn('status', ['approved', 'rejected'])
+            ->name('teachers.update');
+    });
 
 require __DIR__ . '/auth.php';
