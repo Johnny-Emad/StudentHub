@@ -28,19 +28,23 @@ class StudentController extends Controller
             'last_name' => 'required|string|max:100',
             'email' => 'nullable|email|max:255|unique:students,email',
             'phone' => 'nullable|string|max:20',
-            'date_of_birth' => 'nullable|date|before:today',
+            'date_of_birth' => 'nullable|date|before_or_equal:today',
             'gender' => 'nullable|in:male,female',
-            'address' => 'nullable|string',
+            'address' => 'nullable|string|max:1000',
             'grade' => 'required|string|max:50',
-            'class_section' => 'required|string|max:1',
+            'class_section' => 'required|string|size:1',
             'status' => 'required|in:active,inactive',
         ]);
 
         Student::create($validated);
 
-        return redirect()
-            ->route('students.index')
+        return redirect()->route('students.index')
             ->with('success', 'Student added successfully.');
+    }
+
+    public function show(Student $student)
+    {
+        return view('students.show', compact('student'));
     }
 
     public function edit(Student $student)
@@ -57,41 +61,37 @@ class StudentController extends Controller
                 'max:255',
                 Rule::unique('students', 'student_code')->ignore($student->id),
             ],
+
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
+
             'email' => [
                 'nullable',
                 'email',
                 'max:255',
                 Rule::unique('students', 'email')->ignore($student->id),
             ],
+
             'phone' => 'nullable|string|max:20',
-            'date_of_birth' => 'nullable|date|before:today',
+            'date_of_birth' => 'nullable|date|before_or_equal:today',
             'gender' => 'nullable|in:male,female',
-            'address' => 'nullable|string',
+            'address' => 'nullable|string|max:1000',
             'grade' => 'required|string|max:50',
-            'class_section' => 'required|string|max:10',
+            'class_section' => 'required|string|size:1',
             'status' => 'required|in:active,inactive',
         ]);
 
         $student->update($validated);
 
-        return redirect()
-            ->route('students.index')
+        return redirect()->route('students.index')
             ->with('success', 'Student updated successfully.');
-    }
-
-    public function show(Student $student)
-    {
-        return view('students.show', compact('student'));
     }
 
     public function destroy(Student $student)
     {
         $student->delete();
 
-        return redirect()
-            ->route('students.index')
+        return redirect()->route('students.index')
             ->with('success', 'Student deleted successfully.');
     }
 }
