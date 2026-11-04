@@ -25,7 +25,6 @@ Route::middleware('auth')->group(function () {
         ->name('profile.destroy');
 
     Route::resource('students', StudentController::class)
-        ->except(['show']);
 });
 
 Route::middleware(['auth', 'admin'])
@@ -40,6 +39,5 @@ Route::middleware(['auth', 'admin'])
             ->whereIn('status', ['approved', 'rejected'])
             ->name('teachers.update');
     });
-
 
 require __DIR__ . '/auth.php';
