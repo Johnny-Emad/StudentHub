@@ -21,7 +21,6 @@
                             'first_name' => 'First Name',
                             'last_name' => 'Last Name',
                             'email' => 'Email',
-                            'phone' => 'Phone',
                             'grade' => 'Grade',
                         ] as $field => $label)
 
@@ -32,7 +31,6 @@
                                     type="text"
                                     name="{{ $field }}"
                                     value="{{ old($field, $student->$field) }}"
-                                    maxlength="{{ $field === 'phone' ? 20 : ($field === 'first_name' || $field === 'last_name' ? 100 : 255) }}"
                                     class="w-full border-gray-300 rounded-md"
                                 >
 
@@ -42,6 +40,25 @@
                             </div>
 
                         @endforeach
+
+                        <div>
+                            <label class="block mb-1">Phone</label>
+
+                            <input
+                                type="text"
+                                name="phone"
+                                value="{{ old('phone', $student->phone) }}"
+                                maxlength="11"
+                                minlength="11"
+                                inputmode="numeric"
+                                pattern="[0-9]{11}"
+                                class="w-full border-gray-300 rounded-md"
+                            >
+
+                            @error('phone')
+                                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
 
                         <div>
                             <label class="block mb-1">Class Section</label>
@@ -120,13 +137,17 @@
                     </div>
 
                     <div class="mt-6 flex gap-3">
-                        <button type="submit"
-                                class="px-4 py-2 bg-blue-600 text-white rounded">
+                        <button
+                            type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded"
+                        >
                             Update Student
                         </button>
 
-                        <a href="{{ route('students.index') }}"
-                           class="px-4 py-2 bg-gray-200 rounded">
+                        <a
+                            href="{{ route('students.index') }}"
+                            class="px-4 py-2 bg-gray-200 rounded"
+                        >
                             Cancel
                         </a>
                     </div>

@@ -27,7 +27,7 @@ class StudentController extends Controller
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'email' => 'nullable|email|max:255|unique:students,email',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|digits:11',
             'date_of_birth' => 'nullable|date|before_or_equal:today',
             'gender' => 'nullable|in:male,female',
             'address' => 'nullable|string|max:1000',
@@ -72,7 +72,7 @@ class StudentController extends Controller
                 Rule::unique('students', 'email')->ignore($student->id),
             ],
 
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|digits:11',
             'date_of_birth' => 'nullable|date|before_or_equal:today',
             'gender' => 'nullable|in:male,female',
             'address' => 'nullable|string|max:1000',
