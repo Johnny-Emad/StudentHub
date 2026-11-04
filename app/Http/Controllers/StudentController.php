@@ -81,6 +81,11 @@ class StudentController extends Controller
             ->with('success', 'Student updated successfully.');
     }
 
+    public function show(Student $student)
+    {
+        return view('students.show', compact('student'));
+    }
+
     public function destroy(Student $student)
     {
         $student->delete();
