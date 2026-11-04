@@ -24,7 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
 
-    Route::resource('students', StudentController::class)
+    Route::resource('students', StudentController::class);
 });
 
 Route::middleware(['auth', 'admin'])
@@ -36,7 +36,7 @@ Route::middleware(['auth', 'admin'])
             ->name('teachers.index');
 
         Route::patch('/teachers/{user}/{status}', [TeacherApprovalController::class, 'update'])
-            ->whereIn('status', ['approved', 'rejected'])
+            ->where('status', 'approved|rejected')
             ->name('teachers.update');
     });
 
