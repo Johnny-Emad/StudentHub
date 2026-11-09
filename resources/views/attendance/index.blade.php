@@ -10,9 +10,19 @@
 
             <div class="bg-white p-6 shadow-sm sm:rounded-lg">
 
-                <h3 class="text-lg font-semibold mb-4">
-                    Filter Students
-                </h3>
+                @if (session('success'))
+                    <div class="mb-4 p-3 bg-green-100 text-green-800 rounded">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                @if ($errors->any())
+                    <div class="mb-4 p-3 bg-red-100 text-red-800 rounded">
+                        @foreach ($errors->all() as $error)
+                            <p>{{ $error }}</p>
+                        @endforeach
+                    </div>
+                @endif
 
                 <form method="GET" action="{{ route('attendance.index') }}"
                     class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -64,44 +74,89 @@
                             Reset
                         </a>
                     </div>
-
                 </form>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-600">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th class="px-6 py-3">Student Code</th>
-                                <th class="px-6 py-3">First Name</th>
-                                <th class="px-6 py-3">Last Name</th>
-                                <th class="px-6 py-3">Grade</th>
-                                <th class="px-6 py-3">Section</th>
-                            </tr>
-                        </thead>
+                <form method="POST" action="{{ route('attendance.store') }}">
+                    @csrf
 
-                        <tbody>
-                            @forelse ($students as $student)
-                                <tr class="bg-white border-b hover:bg-gray-50">
-                                    <td class="px-6 py-4">{{ $student->student_code }}</td>
-                                    <td class="px-6 py-4">{{ $student->first_name }}</td>
-                                    <td class="px-6 py-4">{{ $student->last_name }}</td>
-                                    <td class="px-6 py-4">{{ $student->grade }}</td>
-                                    <td class="px-6 py-4">{{ $student->class_section }}</td>
-                                </tr>
-                            @empty
+                    <div class="mb-6">
+                        <label for="date" class="block text-sm font-medium mb-2">
+                            Attendance Date
+                        </label>
+
+                        <input type="date"
+                            name="date"
+                            id="date"
+                            value="{{ request('date', now()->toDateString()) }}"
+                            required
+                            class="border-gray-300 rounded-md shadow-sm">
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-600">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                                 <tr>
-                                    <td colspan="5" class="px-6 py-6 text-center">
-                                        No students found.
-                                    </td>
+                                    <th class="px-6 py-3">Student Code</th>
+                                    <th class="px-6 py-3">Student Name</th>
+                                    <th class="px-6 py-3">Grade</th>
+                                    <th class="px-6 py-3">Section</th>
+                                    <th class="px-6 py-3">Attendance</th>
                                 </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
 
-                <p class="mt-4 text-sm text-gray-500">
-                    Total students: {{ $students->count() }}
-                </p>
+                            <tbody>
+                                @forelse ($students as $student)
+                                    <tr class="bg-white border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4">
+                                            {{ $student->student_code }}
+                                        </td>
+
+                                        <td class="px-6 py-4">
+                                            {{ $student->first_name }} {{ $student->last_name }}
+                                        </td>
+
+                                        <td class="px-6 py-4">
+                                            {{ $student->grade }}
+                                        </td>
+
+                                        <td class="px-6 py-4">
+                                            {{ $student->class_section }}
+                                        </td>
+
+                                        <td class="px-6 py-4">
+                                            <select
+                                                name="attendance[{{ $student->id }}]"
+                                                required
+                                                class="border-gray-300 rounded-md shadow-sm">
+                                                <option value="present">Present</option>
+                                                <option value="absent">Absent</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-6 text-center">
+                                            No students found.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if ($students->isNotEmpty())
+                        <div class="mt-6 flex justify-between items-center">
+                            <p class="text-sm text-gray-500">
+                                Total students: {{ $students->count() }}
+                            </p>
+
+                            <button type="submit"
+                                class="px-5 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700">
+                                Save Attendance
+                            </button>
+                        </div>
+                    @endif
+                </form>
 
             </div>
         </div>
