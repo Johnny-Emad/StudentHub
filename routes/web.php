@@ -55,6 +55,12 @@ Route::middleware('auth')->group(function () {
                 ->whereIn('status', ['approved', 'rejected'])
                 ->name('teachers.update');
 
+            Route::get('/subjects/{subject}/grades', [SubjectController::class, 'editGrades'])
+                ->name('subjects.grades.edit');
+
+            Route::put('/subjects/{subject}/grades', [SubjectController::class, 'updateGrades'])
+                ->name('subjects.grades.update');
+
             Route::resource('subjects', SubjectController::class)
                 ->except(['show']);
         });

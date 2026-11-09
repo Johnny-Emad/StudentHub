@@ -27,28 +27,13 @@
 
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
-
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    #
-                                </th>
-
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Subject Name
-                                </th>
-
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Description
-                                </th>
-
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Assigned Grades
-                                </th>
-
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                    Actions
-                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned Grades</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
 
@@ -72,7 +57,12 @@
                                     </td>
 
                                     <td class="px-4 py-3">
-                                        <div class="flex items-center gap-3">
+                                        <div class="flex flex-wrap items-center gap-3">
+
+                                            <a href="{{ route('admin.subjects.grades.edit', $subject) }}"
+                                               class="text-purple-600 hover:text-purple-800">
+                                                Assign Grades
+                                            </a>
 
                                             <a href="{{ route('admin.subjects.edit', $subject) }}"
                                                class="text-blue-600 hover:text-blue-800">
@@ -104,7 +94,6 @@
                                 </tr>
                             @endforelse
                         </tbody>
-
                     </table>
                 </div>
 
