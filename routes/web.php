@@ -32,6 +32,9 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/attendance', [AttendanceController::class, 'store'])
         ->name('attendance.store');
+
+    Route::patch('/attendance/{attendance}', [AttendanceController::class, 'update'])
+        ->name('attendance.update');
 });
 
 Route::middleware(['auth', 'admin'])

@@ -20,6 +20,9 @@ class AttendanceController extends Controller
             ->when($request->filled('class_section'), function ($query) use ($request) {
                 $query->where('class_section', $request->class_section);
             })
+            ->with(['attendances' => function ($query) use ($request) {
+                $query->where('date', $request->input('date', now()->toDateString()));
+            }])
             ->orderBy('first_name')
             ->get();
 
@@ -83,5 +86,19 @@ class AttendanceController extends Controller
         return redirect()
             ->route('attendance.index')
             ->with('success', 'Attendance saved successfully.');
+    }
+
+    public function update(Request $request, Attendance $attendance)
+    {
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['present', 'absent'])],
+        ]);
+
+        $attendance->update([
+            'status' => $validated['status'],
+            'marked_by' => $request->user()->id,
+        ]);
+
+        return back()->with('success', 'Attendance updated successfully.');
     }
 }
