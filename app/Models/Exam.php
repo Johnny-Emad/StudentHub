@@ -7,17 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'subject_id',
-    'title',
-    'grade',
-    'class_section',
-    'exam_date',
-    'total_marks',
+    'exam_id',
+    'student_id',
+    'marks_obtained',
 ])]
-class Exam extends Model
+class ExamGrade extends Model
 {
-    public function subject(): BelongsTo
+    public function exam(): BelongsTo
     {
-        return $this->belongsTo(Subject::class);
+        return $this->belongsTo(Exam::class);
+    }
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class);
     }
 }
