@@ -13,16 +13,15 @@ class AttendanceController extends Controller
 {
     public function index(Request $request)
     {
+        $date = $request->input('date', now()->toDateString());
+
         $students = Student::query()
-            ->when($request->filled('grade'), function ($query) use ($request) {
-                $query->where('grade', $request->grade);
-            })
-            ->when($request->filled('class_section'), function ($query) use ($request) {
-                $query->where('class_section', $request->class_section);
-            })
-            ->with(['attendances' => function ($query) use ($request) {
-                $query->where('date', $request->input('date', now()->toDateString()));
-            }])
+            ->when($request->filled('grade'), fn($query) =>
+            $query->where('grade', $request->grade))
+            ->when($request->filled('class_section'), fn($query) =>
+            $query->where('class_section', $request->class_section))
+            ->with(['attendances' => fn($query) =>
+            $query->where('date', $date)])
             ->orderBy('first_name')
             ->get();
 
@@ -53,23 +52,20 @@ class AttendanceController extends Controller
 
         $studentIds = array_keys($validated['attendance']);
 
-        $students = Student::whereIn('id', $studentIds)->pluck('id')->all();
-
-        if (count($students) !== count($studentIds)) {
+        if (Student::whereIn('id', $studentIds)->count() !== count($studentIds)) {
             throw ValidationException::withMessages([
                 'attendance' => 'Invalid student selection.',
             ]);
         }
 
         DB::transaction(function () use ($validated, $request) {
-
-            $existingAttendance = Attendance::where('date', $validated['date'])
+            $existing = Attendance::where('date', $validated['date'])
                 ->whereIn('student_id', array_keys($validated['attendance']))
                 ->exists();
 
-            if ($existingAttendance) {
+            if ($existing) {
                 throw ValidationException::withMessages([
-                    'attendance' => 'Attendance has already been recorded for one or more selected students on this date.',
+                    'attendance' => 'Attendance already exists for one or more selected students.',
                 ]);
             }
 
@@ -83,9 +79,7 @@ class AttendanceController extends Controller
             }
         });
 
-        return redirect()
-            ->route('attendance.index')
-            ->with('success', 'Attendance saved successfully.');
+        return back()->with('success', 'Attendance saved successfully.');
     }
 
     public function update(Request $request, Attendance $attendance)
@@ -100,5 +94,37 @@ class AttendanceController extends Controller
         ]);
 
         return back()->with('success', 'Attendance updated successfully.');
+    }
+
+    public function history(Request $request)
+    {
+        $attendances = Attendance::with(['student', 'marker'])
+            ->when($request->filled('date'), fn($query) =>
+            $query->whereDate('date', $request->date))
+            ->when($request->filled('grade'), fn($query) =>
+            $query->whereHas('student', fn($studentQuery) =>
+            $studentQuery->where('grade', $request->grade)))
+            ->when($request->filled('class_section'), fn($query) =>
+            $query->whereHas('student', fn($studentQuery) =>
+            $studentQuery->where('class_section', $request->class_section)))
+            ->when($request->filled('student'), fn($query) =>
+            $query->where('student_id', $request->student))
+            ->latest('date')
+            ->paginate(20)
+            ->withQueryString();
+
+        $grades = Student::select('grade')->distinct()->orderBy('grade')->pluck('grade');
+
+        $sections = Student::select('class_section')
+            ->distinct()->orderBy('class_section')->pluck('class_section');
+
+        $students = Student::orderBy('first_name')->get();
+
+        return view('attendance.history', compact(
+            'attendances',
+            'grades',
+            'sections',
+            'students'
+        ));
     }
 }

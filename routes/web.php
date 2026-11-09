@@ -35,6 +35,9 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('/attendance/{attendance}', [AttendanceController::class, 'update'])
         ->name('attendance.update');
+
+    Route::get('/attendance/history', [AttendanceController::class, 'history'])
+        ->name('attendance.history');
 });
 
 Route::middleware(['auth', 'admin'])
