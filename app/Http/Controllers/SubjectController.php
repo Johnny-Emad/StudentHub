@@ -10,11 +10,15 @@ use Illuminate\Support\Facades\DB;
 
 class SubjectController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $subjects = Subject::withCount('gradeAssignments')
+        $subjects = Subject::with('gradeAssignments')
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            })
             ->orderBy('name')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('subjects.index', compact('subjects'));
     }
