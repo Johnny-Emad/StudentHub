@@ -6,6 +6,8 @@ use App\Models\Attendance;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AttendanceController extends Controller
 {
@@ -51,19 +53,32 @@ class AttendanceController extends Controller
         $students = Student::whereIn('id', $studentIds)->pluck('id')->all();
 
         if (count($students) !== count($studentIds)) {
-            return back()->withErrors([
+            throw ValidationException::withMessages([
                 'attendance' => 'Invalid student selection.',
             ]);
         }
 
-        foreach ($validated['attendance'] as $studentId => $status) {
-            Attendance::create([
-                'student_id' => $studentId,
-                'date' => $validated['date'],
-                'status' => $status,
-                'marked_by' => $request->user()->id,
-            ]);
-        }
+        DB::transaction(function () use ($validated, $request) {
+
+            $existingAttendance = Attendance::where('date', $validated['date'])
+                ->whereIn('student_id', array_keys($validated['attendance']))
+                ->exists();
+
+            if ($existingAttendance) {
+                throw ValidationException::withMessages([
+                    'attendance' => 'Attendance has already been recorded for one or more selected students on this date.',
+                ]);
+            }
+
+            foreach ($validated['attendance'] as $studentId => $status) {
+                Attendance::create([
+                    'student_id' => $studentId,
+                    'date' => $validated['date'],
+                    'status' => $status,
+                    'marked_by' => $request->user()->id,
+                ]);
+            }
+        });
 
         return redirect()
             ->route('attendance.index')
