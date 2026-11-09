@@ -8,11 +8,63 @@ use Illuminate\Validation\Rule;
 
 class StudentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $students = Student::latest()->paginate(10);
+        $query = Student::query();
 
-        return view('students.index', compact('students'));
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('student_code', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhereRaw(
+                        "CONCAT(first_name, ' ', last_name) LIKE ?",
+                        ["%{$search}%"]
+                    )
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        // Grade Filter
+        if ($request->filled('grade')) {
+            $query->where('grade', $request->grade);
+        }
+
+        // Class Section Filter
+        if ($request->filled('class_section')) {
+            $query->where('class_section', $request->class_section);
+        }
+
+        // Status Filter
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Pagination
+        $students = $query->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        // Dynamic Filter Options
+        $grades = Student::select('grade')
+            ->distinct()
+            ->orderBy('grade')
+            ->pluck('grade');
+
+        $sections = Student::select('class_section')
+            ->distinct()
+            ->orderBy('class_section')
+            ->pluck('class_section');
+
+        return view('students.index', compact(
+            'students',
+            'grades',
+            'sections'
+        ));
     }
 
     public function create()
