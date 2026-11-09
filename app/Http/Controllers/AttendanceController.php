@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AttendanceController extends Controller
 {
@@ -34,5 +36,37 @@ class AttendanceController extends Controller
             'grades',
             'sections'
         ));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+            'attendance' => ['required', 'array', 'min:1'],
+            'attendance.*' => ['required', Rule::in(['present', 'absent'])],
+        ]);
+
+        $studentIds = array_keys($validated['attendance']);
+
+        $students = Student::whereIn('id', $studentIds)->pluck('id')->all();
+
+        if (count($students) !== count($studentIds)) {
+            return back()->withErrors([
+                'attendance' => 'Invalid student selection.',
+            ]);
+        }
+
+        foreach ($validated['attendance'] as $studentId => $status) {
+            Attendance::create([
+                'student_id' => $studentId,
+                'date' => $validated['date'],
+                'status' => $status,
+                'marked_by' => $request->user()->id,
+            ]);
+        }
+
+        return redirect()
+            ->route('attendance.index')
+            ->with('success', 'Attendance saved successfully.');
     }
 }
