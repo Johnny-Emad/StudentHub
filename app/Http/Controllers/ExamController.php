@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Exam;
 use App\Models\Subject;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -65,6 +66,25 @@ class ExamController extends Controller
         return redirect()
             ->route('admin.exams.index')
             ->with('success', 'Exam deleted successfully.');
+    }
+
+    public function targetStudents(Exam $exam)
+    {
+        $students = Student::where('grade', $exam->grade)
+            ->where('class_section', $exam->class_section)
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->paginate(20);
+
+        $targetCount = Student::where('grade', $exam->grade)
+            ->where('class_section', $exam->class_section)
+            ->count();
+
+        return view('exams.students', compact(
+            'exam',
+            'students',
+            'targetCount'
+        ));
     }
 
     private function validateExam(Request $request): array
