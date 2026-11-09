@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\Admin\TeacherApprovalController;
 
 Route::get('/', function () {
@@ -41,19 +42,22 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/attendance/dashboard', [AttendanceController::class, 'dashboard'])
         ->name('attendance.dashboard');
+
+    Route::middleware('admin')
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
+
+            Route::get('/teachers', [TeacherApprovalController::class, 'index'])
+                ->name('teachers.index');
+
+            Route::patch('/teachers/{user}/{status}', [TeacherApprovalController::class, 'update'])
+                ->whereIn('status', ['approved', 'rejected'])
+                ->name('teachers.update');
+
+            Route::resource('subjects', SubjectController::class)
+                ->except(['show']);
+        });
 });
-
-Route::middleware(['auth', 'admin'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-
-        Route::get('/teachers', [TeacherApprovalController::class, 'index'])
-            ->name('teachers.index');
-
-        Route::patch('/teachers/{user}/{status}', [TeacherApprovalController::class, 'update'])
-            ->where('status', 'approved|rejected')
-            ->name('teachers.update');
-    });
 
 require __DIR__ . '/auth.php';
