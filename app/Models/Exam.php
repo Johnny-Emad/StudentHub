@@ -5,21 +5,25 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'exam_id',
-    'student_id',
-    'marks_obtained',
+    'subject_id',
+    'title',
+    'grade',
+    'class_section',
+    'exam_date',
+    'total_marks',
 ])]
-class ExamGrade extends Model
+class Exam extends Model
 {
-    public function exam(): BelongsTo
+    public function subject(): BelongsTo
     {
-        return $this->belongsTo(Exam::class);
+        return $this->belongsTo(Subject::class);
     }
 
-    public function student(): BelongsTo
+    public function grades(): HasMany
     {
-        return $this->belongsTo(Student::class);
+        return $this->hasMany(ExamGrade::class);
     }
 }
