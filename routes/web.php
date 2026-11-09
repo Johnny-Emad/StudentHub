@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Admin\TeacherApprovalController;
 
 Route::get('/', function () {
@@ -25,6 +26,9 @@ Route::middleware('auth')->group(function () {
         ->name('profile.destroy');
 
     Route::resource('students', StudentController::class);
+
+    Route::get('/attendance', [AttendanceController::class, 'index'])
+        ->name('attendance.index');
 });
 
 Route::middleware(['auth', 'admin'])
