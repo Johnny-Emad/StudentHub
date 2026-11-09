@@ -38,6 +38,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/attendance/history', [AttendanceController::class, 'history'])
         ->name('attendance.history');
+
+    Route::get('/attendance/dashboard', [AttendanceController::class, 'dashboard'])
+        ->name('attendance.dashboard');
 });
 
 Route::middleware(['auth', 'admin'])

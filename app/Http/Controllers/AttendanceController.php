@@ -38,7 +38,8 @@ class AttendanceController extends Controller
         return view('attendance.index', compact(
             'students',
             'grades',
-            'sections'
+            'sections',
+            'date'
         ));
     }
 
@@ -98,25 +99,40 @@ class AttendanceController extends Controller
 
     public function history(Request $request)
     {
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'grade' => ['nullable', 'string'],
+            'class_section' => ['nullable', 'string'],
+            'student' => ['nullable', 'integer', 'exists:students,id'],
+        ]);
+
         $attendances = Attendance::with(['student', 'marker'])
-            ->when($request->filled('date'), fn($query) =>
-            $query->whereDate('date', $request->date))
-            ->when($request->filled('grade'), fn($query) =>
+            ->when(!empty($validated['from']), fn($query) =>
+            $query->whereDate('date', '>=', $validated['from']))
+            ->when(!empty($validated['to']), fn($query) =>
+            $query->whereDate('date', '<=', $validated['to']))
+            ->when(!empty($validated['grade']), fn($query) =>
             $query->whereHas('student', fn($studentQuery) =>
-            $studentQuery->where('grade', $request->grade)))
-            ->when($request->filled('class_section'), fn($query) =>
+            $studentQuery->where('grade', $validated['grade'])))
+            ->when(!empty($validated['class_section']), fn($query) =>
             $query->whereHas('student', fn($studentQuery) =>
-            $studentQuery->where('class_section', $request->class_section)))
-            ->when($request->filled('student'), fn($query) =>
-            $query->where('student_id', $request->student))
+            $studentQuery->where('class_section', $validated['class_section'])))
+            ->when(!empty($validated['student']), fn($query) =>
+            $query->where('student_id', $validated['student']))
             ->latest('date')
             ->paginate(20)
             ->withQueryString();
 
-        $grades = Student::select('grade')->distinct()->orderBy('grade')->pluck('grade');
+        $grades = Student::select('grade')
+            ->distinct()
+            ->orderBy('grade')
+            ->pluck('grade');
 
         $sections = Student::select('class_section')
-            ->distinct()->orderBy('class_section')->pluck('class_section');
+            ->distinct()
+            ->orderBy('class_section')
+            ->pluck('class_section');
 
         $students = Student::orderBy('first_name')->get();
 
@@ -125,6 +141,56 @@ class AttendanceController extends Controller
             'grades',
             'sections',
             'students'
+        ));
+    }
+
+    public function dashboard(Request $request)
+    {
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'grade' => ['nullable', 'string'],
+            'class_section' => ['nullable', 'string'],
+        ]);
+
+        $query = Attendance::query()
+            ->whereHas('student', function ($studentQuery) use ($request) {
+                $studentQuery
+                    ->when($request->filled('grade'), fn($q) =>
+                    $q->where('grade', $request->grade))
+                    ->when($request->filled('class_section'), fn($q) =>
+                    $q->where('class_section', $request->class_section));
+            })
+            ->when($request->filled('from'), fn($q) =>
+            $q->whereDate('date', '>=', $request->from))
+            ->when($request->filled('to'), fn($q) =>
+            $q->whereDate('date', '<=', $request->to));
+
+        $total = (clone $query)->count();
+        $present = (clone $query)->where('status', 'present')->count();
+        $absent = (clone $query)->where('status', 'absent')->count();
+
+        $attendanceRate = $total > 0
+            ? round(($present / $total) * 100, 2)
+            : 0;
+
+        $grades = Student::select('grade')
+            ->distinct()
+            ->orderBy('grade')
+            ->pluck('grade');
+
+        $sections = Student::select('class_section')
+            ->distinct()
+            ->orderBy('class_section')
+            ->pluck('class_section');
+
+        return view('attendance.dashboard', compact(
+            'total',
+            'present',
+            'absent',
+            'attendanceRate',
+            'grades',
+            'sections'
         ));
     }
 }
