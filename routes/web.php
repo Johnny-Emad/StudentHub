@@ -10,22 +10,11 @@ use App\Http\Controllers\ExamController;
 use App\Http\Controllers\Admin\TeacherApprovalController;
 use App\Http\Controllers\SubjectController;
 
-/*
-|--------------------------------------------------------------------------
-| Public Routes
-|--------------------------------------------------------------------------
-*/
-
 Route::get('/', function () {
     return view('welcome');
 });
 
 
-/*
-|--------------------------------------------------------------------------
-| Authenticated Routes
-|--------------------------------------------------------------------------
-*/
 
 Route::middleware('auth')->group(function () {
 
@@ -67,12 +56,6 @@ Route::middleware('auth')->group(function () {
         ->name('attendance.dashboard');
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Admin Routes
-    |--------------------------------------------------------------------------
-    */
-
     Route::middleware('admin')
         ->prefix('admin')
         ->name('admin.')
@@ -83,7 +66,6 @@ Route::middleware('auth')->group(function () {
                 ->name('teachers.index');
 
             Route::patch('/teachers/{user}/status', [TeacherApprovalController::class, 'update'])
-                ->whereIn('status', ['approved', 'rejected'])
                 ->name('teachers.update');
 
 
@@ -100,6 +82,9 @@ Route::middleware('auth')->group(function () {
 
 
             // Exams Management
+            Route::get('/exams/{exam}/students', [ExamController::class, 'targetStudents'])
+                ->name('exams.students');
+
             Route::resource('exams', ExamController::class)
                 ->except(['show']);
         });
