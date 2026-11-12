@@ -75,6 +75,12 @@ Route::middleware('auth')->group(function () {
                 [TeacherApprovalController::class, 'reject']
             )->name('teachers.reject');
 
+            // Combined update route used by the view
+            Route::patch(
+                '/teachers/{user}/{status}',
+                [TeacherApprovalController::class, 'update']
+            )->name('teachers.update');
+
             // Subject Statistics
             Route::get(
                 '/subjects/statistics',
