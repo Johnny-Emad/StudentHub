@@ -1,16 +1,24 @@
-
 <?php
 
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SchoolStatisticsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Students statistics
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
+
+        $from = $validated['from'] ?? null;
+        $to = $validated['to'] ?? null;
+
+        // General school statistics
         $studentsCount = Student::count();
 
         $gradesCount = Student::distinct('grade')
@@ -21,17 +29,36 @@ class SchoolStatisticsController extends Controller
             ->distinct()
             ->count();
 
-        // Subjects and exams
         $subjectsCount = DB::table('subjects')->count();
 
-        $examsCount = DB::table('exams')->count();
+        // Exams within selected date range
+        $examsQuery = DB::table('exams');
 
-        // Recorded grades
-        $gradesCountRecorded = DB::table('exam_grades')->count();
+        if ($from) {
+            $examsQuery->whereDate('exam_date', '>=', $from);
+        }
 
-        // Overall academic average
-        $totals = DB::table('exam_grades')
-            ->join('exams', 'exam_grades.exam_id', '=', 'exams.id')
+        if ($to) {
+            $examsQuery->whereDate('exam_date', '<=', $to);
+        }
+
+        $examsCount = $examsQuery->count();
+
+        // Grades within selected exam date range
+        $gradesQuery = DB::table('exam_grades')
+            ->join('exams', 'exam_grades.exam_id', '=', 'exams.id');
+
+        if ($from) {
+            $gradesQuery->whereDate('exams.exam_date', '>=', $from);
+        }
+
+        if ($to) {
+            $gradesQuery->whereDate('exams.exam_date', '<=', $to);
+        }
+
+        $gradesCountRecorded = (clone $gradesQuery)->count();
+
+        $totals = (clone $gradesQuery)
             ->selectRaw('SUM(exam_grades.marks_obtained) as obtained')
             ->selectRaw('SUM(exams.total_marks) as possible')
             ->first();
@@ -40,9 +67,8 @@ class SchoolStatisticsController extends Controller
             ? round(($totals->obtained / $totals->possible) * 100, 2)
             : null;
 
-        // Student averages
-        $studentAverages = DB::table('exam_grades')
-            ->join('exams', 'exam_grades.exam_id', '=', 'exams.id')
+        // Student averages within selected period
+        $studentAverages = (clone $gradesQuery)
             ->select('exam_grades.student_id')
             ->selectRaw('SUM(exam_grades.marks_obtained) as obtained')
             ->selectRaw('SUM(exams.total_marks) as possible')
@@ -63,14 +89,24 @@ class SchoolStatisticsController extends Controller
             ? round($studentAverages->min(), 2)
             : null;
 
-        // Attendance statistics
-        $attendanceCount = DB::table('attendances')->count();
+        // Attendance within selected date range
+        $attendanceQuery = DB::table('attendances');
 
-        $presentCount = DB::table('attendances')
+        if ($from) {
+            $attendanceQuery->whereDate('date', '>=', $from);
+        }
+
+        if ($to) {
+            $attendanceQuery->whereDate('date', '<=', $to);
+        }
+
+        $attendanceCount = (clone $attendanceQuery)->count();
+
+        $presentCount = (clone $attendanceQuery)
             ->where('status', 'present')
             ->count();
 
-        $absentCount = DB::table('attendances')
+        $absentCount = (clone $attendanceQuery)
             ->where('status', 'absent')
             ->count();
 
@@ -91,7 +127,9 @@ class SchoolStatisticsController extends Controller
             'attendanceCount',
             'presentCount',
             'absentCount',
-            'attendanceRate'
+            'attendanceRate',
+            'from',
+            'to'
         ));
     }
 }
