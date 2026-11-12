@@ -11,15 +11,8 @@ class TeacherApprovalController extends Controller
 {
     public function index(): View
     {
-        $status = request('status', 'pending');
-        $validStatuses = ['pending', 'approved', 'rejected'];
-
-        if (!in_array($status, $validStatuses)) {
-            $status = 'pending';
-        }
-
         $teachers = User::where('role', 'teacher')
-            ->where('status', $status)
+            ->where('status', 'pending')
             ->latest()
             ->get();
 

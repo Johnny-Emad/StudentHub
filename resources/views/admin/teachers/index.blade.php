@@ -23,27 +23,7 @@
 
     <div class="mb-5">
         <h1 class="text-xl font-bold text-gray-900">Teacher Approvals</h1>
-        <p class="text-sm text-gray-500 mt-0.5">Review and manage teacher registration requests.</p>
-    </div>
-
-    {{-- Status tabs --}}
-    <div class="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-5">
-        @php
-            $tabs = [
-                ['label' => 'Pending',  'status' => 'pending',  'color' => 'amber'],
-                ['label' => 'Approved', 'status' => 'approved', 'color' => 'emerald'],
-                ['label' => 'Rejected', 'status' => 'rejected', 'color' => 'rose'],
-            ];
-            $currentStatus = request('status', 'pending');
-        @endphp
-        @foreach($tabs as $tab)
-            <a href="{{ route('admin.teachers.index', ['status' => $tab['status']]) }}"
-               class="{{ $currentStatus === $tab['status']
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700' }} px-4 py-1.5 rounded-lg text-sm font-medium transition-all">
-                {{ $tab['label'] }}
-            </a>
-        @endforeach
+        <p class="text-sm text-gray-500 mt-0.5">Review and manage pending teacher registration requests.</p>
     </div>
 
     {{-- Table card --}}
@@ -54,7 +34,6 @@
                     <tr class="border-b border-gray-100 bg-gray-50/60">
                         <th class="table-header">Teacher</th>
                         <th class="table-header">Email</th>
-                        <th class="table-header">Status</th>
                         <th class="table-header text-right">Actions</th>
                     </tr>
                 </thead>
@@ -73,52 +52,37 @@
                             </td>
                             <td class="table-cell text-gray-500">{{ $teacher->email }}</td>
                             <td class="table-cell">
-                                @php $s = $teacher->status ?? 'pending'; @endphp
-                                @if($s === 'approved')
-                                    <span class="badge-green">Approved</span>
-                                @elseif($s === 'rejected')
-                                    <span class="badge-red">Rejected</span>
-                                @else
-                                    <span class="badge-yellow">Pending</span>
-                                @endif
-                            </td>
-                            <td class="table-cell">
                                 <div class="flex items-center justify-end gap-2">
-                                    @if($teacher->status != 'approved')
-                                        <form method="POST" action="{{ route('admin.teachers.update', [$teacher->id, 'approved']) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn-success btn-sm flex items-center gap-1.5">
-                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                                </svg>
-                                                Approve
-                                            </button>
-                                        </form>
-                                    @endif
-
-                                    @if($teacher->status != 'rejected')
-                                        <form method="POST" action="{{ route('admin.teachers.update', [$teacher->id, 'rejected']) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn-danger btn-sm flex items-center gap-1.5">
-                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                                </svg>
-                                                Reject
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <form method="POST" action="{{ route('admin.teachers.update', [$teacher->id, 'approved']) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn-success btn-sm flex items-center gap-1.5">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                            </svg>
+                                            Approve
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ route('admin.teachers.update', [$teacher->id, 'rejected']) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn-danger btn-sm flex items-center gap-1.5">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Reject
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="py-16 text-center">
+                            <td colspan="3" class="py-16 text-center">
                                 <svg class="w-10 h-10 text-gray-200 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
                                 </svg>
-                                <p class="text-sm font-medium text-gray-500">No {{ $currentStatus }} teachers</p>
+                                <p class="text-sm font-medium text-gray-500">No pending teacher approvals.</p>
                                 <p class="text-xs text-gray-400 mt-1">Check back when new requests come in.</p>
                             </td>
                         </tr>
