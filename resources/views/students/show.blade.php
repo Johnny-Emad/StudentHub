@@ -22,8 +22,8 @@
         {{-- Student header card --}}
         <div class="card p-6 mb-4">
             <div class="flex items-start gap-5">
-                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shrink-0 shadow-md">
-                    <span class="text-xl font-bold text-white">
+                <div class="w-16 h-16 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                    <span class="text-xl font-bold text-indigo-700">
                         {{ strtoupper(substr($student->first_name, 0, 1) . substr($student->last_name, 0, 1)) }}
                     </span>
                 </div>
@@ -78,7 +78,7 @@
                             </div>
                             <div>
                                 <p class="text-xs text-gray-400 font-medium">{{ $row['label'] }}</p>
-                                <p class="text-sm text-gray-800 mt-0.5">{{ $row['value'] ?? '—' }}</p>
+                                <p class="text-sm text-gray-900 mt-0.5">{{ $row['value'] ?? '—' }}</p>
                             </div>
                         </div>
                     @endforeach
@@ -98,7 +98,7 @@
                     @foreach($personal as $row)
                         <div>
                             <p class="text-xs text-gray-400 font-medium">{{ $row['label'] }}</p>
-                            <p class="text-sm text-gray-800 mt-0.5">{{ $row['value'] ?? '—' }}</p>
+                            <p class="text-sm text-gray-900 mt-0.5">{{ $row['value'] ?? '—' }}</p>
                         </div>
                     @endforeach
                 </div>

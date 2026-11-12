@@ -9,9 +9,9 @@
     <div class="mb-6">
         <h1 class="text-xl font-bold text-gray-900">
             Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening') }},
-            {{ explode(' ', Auth::user()->name)[0] }} 👋
+            {{ explode(' ', Auth::user()->name)[0] }}
         </h1>
-        <p class="text-sm text-gray-500 mt-0.5">Here's what's happening in your school today.</p>
+        <p class="text-sm text-gray-500 mt-0.5">Here's what's happening at our school today.</p>
     </div>
 
     {{-- Stats grid --}}
@@ -174,7 +174,7 @@
         <div class="card p-5 lg:col-span-2">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-sm font-semibold text-gray-900">Recent Students</h2>
-                <a href="{{ route('students.index') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition">View all →</a>
+                <a href="{{ route('students.index') }}" class="text-xs font-medium text-indigo-700 hover:text-indigo-800 transition">View all</a>
             </div>
 
             @php
@@ -187,14 +187,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
                     </svg>
                     <p class="text-sm text-gray-400">No students yet.</p>
-                    <a href="{{ route('students.create') }}" class="mt-2 text-sm font-medium text-indigo-600 hover:underline">Add the first one →</a>
+                    <a href="{{ route('students.create') }}" class="mt-2 text-sm font-medium text-indigo-700 hover:underline">Add the first one</a>
                 </div>
             @else
                 <div class="space-y-0 divide-y divide-gray-50">
                     @foreach ($recentStudents as $student)
                         <div class="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shrink-0 shadow-sm">
-                                <span class="text-xs font-bold text-white">{{ strtoupper(substr($student->first_name, 0, 1) . substr($student->last_name, 0, 1)) }}</span>
+                            <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                                <span class="text-xs font-bold text-indigo-700">{{ strtoupper(substr($student->first_name, 0, 1) . substr($student->last_name, 0, 1)) }}</span>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-medium text-gray-900 truncate">{{ $student->first_name }} {{ $student->last_name }}</p>

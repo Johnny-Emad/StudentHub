@@ -29,7 +29,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Subject</p>
-                <p class="text-sm font-semibold text-gray-800">{{ $exam->subject->name }}</p>
+                <p class="text-sm font-semibold text-gray-900">{{ $exam->subject->name }}</p>
             </div>
             <div>
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Grade</p>
@@ -37,11 +37,11 @@
             </div>
             <div>
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Section</p>
-                <p class="text-sm font-semibold text-gray-800">{{ $exam->class_section }}</p>
+                <p class="text-sm font-semibold text-gray-900">{{ $exam->class_section }}</p>
             </div>
             <div>
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Total Marks</p>
-                <p class="text-sm font-semibold text-gray-800">{{ $exam->total_marks }}</p>
+                <p class="text-sm font-semibold text-gray-900">{{ $exam->total_marks }}</p>
             </div>
         </div>
     </div>

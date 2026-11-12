@@ -16,13 +16,13 @@
         type="text"
         name="title"
         id="title"
-        class="form-control @error('title') is-invalid @enderror"
+        class="form-input"
         value="{{ old('title', $exam?->title) }}"
         required
     >
 
     @error('title')
-        <div class="invalid-feedback">{{ $message }}</div>
+        <p class="mt-1.5 text-xs font-medium text-red-600">{{ $message }}</p>
     @enderror
 </div>
 
@@ -32,7 +32,7 @@
     <select
         name="subject_id"
         id="subject_id"
-        class="form-select @error('subject_id') is-invalid @enderror"
+        class="form-input"
         required
     >
         <option value="">Select Subject</option>
@@ -49,7 +49,7 @@
     </select>
 
     @error('subject_id')
-        <div class="invalid-feedback">{{ $message }}</div>
+        <p class="mt-1.5 text-xs font-medium text-red-600">{{ $message }}</p>
     @enderror
 </div>
 
@@ -59,7 +59,7 @@
     <select
         name="grade"
         id="grade"
-        class="form-select @error('grade') is-invalid @enderror"
+        class="form-input"
         required
     >
         <option value="">Select Grade</option>
@@ -75,7 +75,7 @@
     </select>
 
     @error('grade')
-        <div class="invalid-feedback">{{ $message }}</div>
+        <p class="mt-1.5 text-xs font-medium text-red-600">{{ $message }}</p>
     @enderror
 </div>
 
@@ -86,14 +86,14 @@
         type="text"
         name="class_section"
         id="class_section"
-        class="form-control @error('class_section') is-invalid @enderror"
+        class="form-input"
         value="{{ old('class_section', $exam?->class_section) }}"
         maxlength="10"
         required
     >
 
     @error('class_section')
-        <div class="invalid-feedback">{{ $message }}</div>
+        <p class="mt-1.5 text-xs font-medium text-red-600">{{ $message }}</p>
     @enderror
 </div>
 
@@ -104,13 +104,13 @@
         type="date"
         name="exam_date"
         id="exam_date"
-        class="form-control @error('exam_date') is-invalid @enderror"
+        class="form-input"
         value="{{ old('exam_date', $exam?->exam_date) }}"
         required
     >
 
     @error('exam_date')
-        <div class="invalid-feedback">{{ $message }}</div>
+        <p class="mt-1.5 text-xs font-medium text-red-600">{{ $message }}</p>
     @enderror
 </div>
 
@@ -121,7 +121,7 @@
         type="number"
         name="total_marks"
         id="total_marks"
-        class="form-control @error('total_marks') is-invalid @enderror"
+        class="form-input"
         value="{{ old('total_marks', $exam?->total_marks ?? 100) }}"
         min="0.01"
         max="999999.99"
@@ -130,7 +130,7 @@
     >
 
     @error('total_marks')
-        <div class="invalid-feedback">{{ $message }}</div>
+        <p class="mt-1.5 text-xs font-medium text-red-600">{{ $message }}</p>
     @enderror
 </div>
 

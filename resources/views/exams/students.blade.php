@@ -29,15 +29,15 @@
             </div>
             <div>
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Section</p>
-                <p class="text-sm font-semibold text-gray-800">{{ $exam->class_section }}</p>
+                <p class="text-sm font-semibold text-gray-900">{{ $exam->class_section }}</p>
             </div>
             <div>
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Exam Date</p>
-                <p class="text-sm font-semibold text-gray-800">{{ \Carbon\Carbon::parse($exam->exam_date)->format('d M Y') }}</p>
+                <p class="text-sm font-semibold text-gray-900">{{ \Carbon\Carbon::parse($exam->exam_date)->format('d M Y') }}</p>
             </div>
             <div>
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Total Marks</p>
-                <p class="text-sm font-semibold text-gray-800">{{ $exam->total_marks }}</p>
+                <p class="text-sm font-semibold text-gray-900">{{ $exam->total_marks }}</p>
             </div>
         </div>
     </div>

@@ -1,73 +1,61 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Edit Subject
-        </h2>
+        <div class="flex items-center gap-2 text-sm">
+            <a href="{{ route('dashboard') }}" class="text-gray-400 hover:text-gray-600 transition">Dashboard</a>
+            <svg class="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+            <a href="{{ route('admin.subjects.index') }}" class="text-gray-400 hover:text-gray-600 transition">Subjects</a>
+            <svg class="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+            <span class="text-gray-700 font-medium">Edit Subject</span>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="mb-5">
+            <h1 class="text-xl font-bold text-gray-900">Edit Subject</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Update the details for {{ $subject->name }}.</p>
+        </div>
 
-            <div class="bg-white p-6 shadow-sm sm:rounded-lg">
+        <div class="card p-6">
+            @if ($errors->any())
+                <div class="mb-5 px-4 py-3 rounded-md bg-red-50 border border-red-200 text-sm font-medium text-red-800">
+                    @foreach ($errors->all() as $error)
+                        <p>{{ $error }}</p>
+                    @endforeach
+                </div>
+            @endif
 
-                @if ($errors->any())
-                    <div class="mb-4 p-3 bg-red-100 text-red-800 rounded">
-                        @foreach ($errors->all() as $error)
-                            <p>{{ $error }}</p>
-                        @endforeach
-                    </div>
-                @endif
+            <form action="{{ route('admin.subjects.update', $subject) }}" method="POST">
+                @csrf
+                @method('PUT')
 
-                <form action="{{ route('admin.subjects.update', $subject) }}"
-                      method="POST">
+                <div class="mb-4">
+                    <label for="name" class="form-label">Subject Name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value="{{ old('name', $subject->name) }}"
+                        required
+                        maxlength="255"
+                        class="form-input"
+                    >
+                </div>
 
-                    @csrf
-                    @method('PUT')
+                <div class="mb-6">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows="4"
+                        class="form-input"
+                    >{{ old('description', $subject->description) }}</textarea>
+                </div>
 
-                    <div class="mb-4">
-                        <label for="name" class="block font-medium text-sm text-gray-700">
-                            Subject Name
-                        </label>
-
-                        <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value="{{ old('name', $subject->name) }}"
-                            required
-                            maxlength="255"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                        >
-                    </div>
-
-                    <div class="mb-6">
-                        <label for="description" class="block font-medium text-sm text-gray-700">
-                            Description
-                        </label>
-
-                        <textarea
-                            id="description"
-                            name="description"
-                            rows="4"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                        >{{ old('description', $subject->description) }}</textarea>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button type="submit"
-                                class="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700">
-                            Save Changes
-                        </button>
-
-                        <a href="{{ route('admin.subjects.index') }}"
-                           class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
-                            Cancel
-                        </a>
-                    </div>
-
-                </form>
-
-            </div>
+                <div class="flex gap-3 pt-2 border-t border-gray-100">
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                    <a href="{{ route('admin.subjects.index') }}" class="btn-secondary">Cancel</a>
+                </div>
+            </form>
         </div>
     </div>
 </x-app-layout>

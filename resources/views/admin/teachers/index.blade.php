@@ -42,8 +42,8 @@
                         <tr class="hover:bg-gray-50/50 transition">
                             <td class="table-cell">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center shrink-0">
-                                        <span class="text-xs font-bold text-white">
+                                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                                        <span class="text-xs font-bold text-indigo-700">
                                             {{ strtoupper(substr($teacher->name, 0, 2)) }}
                                         </span>
                                     </div>
