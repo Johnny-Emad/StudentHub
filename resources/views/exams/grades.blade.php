@@ -1,29 +1,29 @@
+
 @extends('layouts.app')
 
 @section('content')
 <div class="container">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2>Bulk Grades Entry</h2>
-            <p class="text-muted mb-0">
-                {{ $exam->title }} — {{ $exam->subject->name }}
-            </p>
-        </div>
-
-        <a href="{{ route('admin.exams.students', $exam) }}"
-           class="btn btn-secondary">
-            Back to Students
-        </a>
-    </div>
+    <h2 class="mb-3">Enter Exam Grades</h2>
 
     <div class="card mb-4">
         <div class="card-body">
-            <strong>Grade:</strong> {{ $exam->grade }}
-            <span class="mx-3"></span>
-            <strong>Section:</strong> {{ $exam->class_section }}
-            <span class="mx-3"></span>
-            <strong>Total Marks:</strong> {{ $exam->total_marks }}
+            <h5>{{ $exam->title }}</h5>
+
+            <p class="mb-1">
+                <strong>Subject:</strong> {{ $exam->subject->name }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Grade:</strong> {{ $exam->grade }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Section:</strong> {{ $exam->class_section }}
+            </p>
+
+            <p class="mb-0">
+                <strong>Total Marks:</strong> {{ $exam->total_marks }}
+            </p>
         </div>
     </div>
 
@@ -33,79 +33,168 @@
         </div>
     @endif
 
-    @if($students->count())
-        <form action="{{ route('admin.exams.grades.store', $exam) }}"
-              method="POST">
+    <div class="row mb-4">
+        <div class="col-md-4 mb-2">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Total Students</h6>
+                    <h3>{{ $targetCount }}</h3>
+                </div>
+            </div>
+        </div>
 
-            @csrf
+        <div class="col-md-4 mb-2">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Graded</h6>
+                    <h3 class="text-success">{{ $gradedCount }}</h3>
+                </div>
+            </div>
+        </div>
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Student Code</th>
-                            <th>Student Name</th>
-                            <th>Marks Obtained</th>
-                        </tr>
-                    </thead>
+        <div class="col-md-4 mb-2">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Not Graded</h6>
+                    <h3 class="text-danger">{{ $notGradedCount }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <tbody>
-                        @foreach($students as $student)
-                            @php
-                                $existingGrade = $student->examGrades->first();
-                            @endphp
+    <form method="GET"
+          action="{{ route('admin.exams.grades.create', $exam) }}"
+          class="mb-3">
 
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label for="status" class="form-label">
+                    Filter by Grade Status
+                </label>
 
-                                <td>{{ $student->student_code }}</td>
+                <select name="status" id="status" class="form-select">
+                    <option value="all"
+                        {{ $statusFilter === 'all' ? 'selected' : '' }}>
+                        All Students
+                    </option>
 
-                                <td>
-                                    {{ $student->first_name }}
-                                    {{ $student->last_name }}
-                                </td>
+                    <option value="graded"
+                        {{ $statusFilter === 'graded' ? 'selected' : '' }}>
+                        Graded
+                    </option>
 
-                                <td>
-                                    <input
-                                        type="number"
-                                        name="grades[{{ $student->id }}]"
-                                        class="form-control @error('grades.' . $student->id) is-invalid @enderror"
-                                        value="{{ old('grades.' . $student->id, $existingGrade?->marks_obtained) }}"
-                                        min="0"
-                                        max="{{ $exam->total_marks }}"
-                                        step="0.01"
-                                        required
-                                    >
-
-                                    @error('grades.' . $student->id)
-                                        <div class="invalid-feedback">
-                                            {{ $message }}
-                                        </div>
-                                    @enderror
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                    <option value="not_graded"
+                        {{ $statusFilter === 'not_graded' ? 'selected' : '' }}>
+                        Not Graded
+                    </option>
+                </select>
             </div>
 
-            @error('grades')
-                <div class="alert alert-danger">
-                    {{ $message }}
-                </div>
-            @enderror
-
-            <button type="submit" class="btn btn-primary">
-                Save All Grades
-            </button>
-
-        </form>
-    @else
-        <div class="alert alert-info">
-            No students are assigned to this exam.
+            <div class="col-md-2 mt-2">
+                <button type="submit" class="btn btn-primary">
+                    Filter
+                </button>
+            </div>
         </div>
-    @endif
+    </form>
 
+    <form method="POST"
+          action="{{ route('admin.exams.grades.store', $exam) }}">
+
+        @csrf
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student Code</th>
+                        <th>Student Name</th>
+                        <th>Marks Obtained</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @forelse($students as $student)
+                        @php
+                            $existingGrade = $student->examGrades->first();
+                        @endphp
+
+                        <tr>
+                            <td>{{ $students->firstItem() + $loop->index }}</td>
+
+                            <td>{{ $student->student_code }}</td>
+
+                            <td>
+                                {{ $student->first_name }}
+                                {{ $student->last_name }}
+                            </td>
+
+                            <td>
+                                <input
+                                    type="number"
+                                    name="grades[{{ $student->id }}]"
+                                    class="form-control"
+                                    min="0"
+                                    max="{{ $exam->total_marks }}"
+                                    step="0.01"
+                                    value="{{ old(
+                                        'grades.' . $student->id,
+                                        $existingGrade?->marks_obtained
+                                    ) }}"
+                                    placeholder="Enter marks"
+                                >
+                            </td>
+
+                            <td>
+                                @if($existingGrade)
+                                    <span class="badge bg-success">
+                                        Graded
+                                    </span>
+                                @else
+                                    <span class="badge bg-warning text-dark">
+                                        Not Graded
+                                    </span>
+                                @endif
+                            </td>
+
+                            <td>
+                                @if($existingGrade)
+                                    <a
+                                        href="{{ route(
+                                            'admin.exams.grades.edit',
+                                            [$exam, $existingGrade]
+                                        ) }}"
+                                        class="btn btn-sm btn-primary">
+                                        Edit
+                                    </a>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                No students found.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($students->count() > 0)
+            <button type="submit" class="btn btn-success">
+                Save Grades
+            </button>
+        @endif
+    </form>
+
+    <div class="mt-3">
+        {{ $students->links() }}
+    </div>
 </div>
 @endsection
