@@ -98,41 +98,44 @@
         </div>
     </form>
 
-    <form method="POST"
-          action="{{ route('admin.exams.grades.store', $exam) }}">
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Student Code</th>
+                    <th>Student Name</th>
+                    <th>Marks Obtained</th>
+                    <th>Subject Average</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
 
-        @csrf
+            <tbody>
+                @forelse($students as $student)
+                    @php
+                        $existingGrade = $student->examGrades->first();
+                    @endphp
 
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped align-middle">
-                <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Student Code</th>
-                        <th>Student Name</th>
-                        <th>Marks Obtained</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
+                        <td>{{ $students->firstItem() + $loop->index }}</td>
 
-                <tbody>
-                    @forelse($students as $student)
-                        @php
-                            $existingGrade = $student->examGrades->first();
-                        @endphp
+                        <td>{{ $student->student_code }}</td>
 
-                        <tr>
-                            <td>{{ $students->firstItem() + $loop->index }}</td>
+                        <td>
+                            {{ $student->first_name }}
+                            {{ $student->last_name }}
+                        </td>
 
-                            <td>{{ $student->student_code }}</td>
+                        <td>
+                            <form
+                                method="POST"
+                                action="{{ route('admin.exams.grades.store', $exam) }}"
+                                class="d-flex gap-2">
 
-                            <td>
-                                {{ $student->first_name }}
-                                {{ $student->last_name }}
-                            </td>
+                                @csrf
 
-                            <td>
                                 <input
                                     type="number"
                                     name="grades[{{ $student->id }}]"
@@ -146,52 +149,60 @@
                                     ) }}"
                                     placeholder="Enter marks"
                                 >
-                            </td>
 
-                            <td>
-                                @if($existingGrade)
-                                    <span class="badge bg-success">
-                                        Graded
-                                    </span>
-                                @else
-                                    <span class="badge bg-warning text-dark">
-                                        Not Graded
-                                    </span>
-                                @endif
-                            </td>
+                                <button type="submit" class="btn btn-success">
+                                    Save
+                                </button>
+                            </form>
+                        </td>
 
-                            <td>
-                                @if($existingGrade)
-                                    <a
-                                        href="{{ route(
-                                            'admin.exams.grades.edit',
-                                            [$exam, $existingGrade]
-                                        ) }}"
-                                        class="btn btn-sm btn-primary">
-                                        Edit
-                                    </a>
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center">
-                                No students found.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                        <td>
+                            @if($student->subject_average !== null)
+                                <strong>
+                                    {{ number_format($student->subject_average, 2) }}%
+                                </strong>
+                            @else
+                                <span class="text-muted">No grades yet</span>
+                            @endif
+                        </td>
 
-        @if($students->count() > 0)
-            <button type="submit" class="btn btn-success">
-                Save Grades
-            </button>
-        @endif
-    </form>
+                        <td>
+                            @if($existingGrade)
+                                <span class="badge bg-success">
+                                    Graded
+                                </span>
+                            @else
+                                <span class="badge bg-warning text-dark">
+                                    Not Graded
+                                </span>
+                            @endif
+                        </td>
+
+                        <td>
+                            @if($existingGrade)
+                                <a
+                                    href="{{ route(
+                                        'admin.exams.grades.edit',
+                                        [$exam, $existingGrade]
+                                    ) }}"
+                                    class="btn btn-sm btn-primary">
+                                    Edit
+                                </a>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            No students found.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
     <div class="mt-3">
         {{ $students->links() }}

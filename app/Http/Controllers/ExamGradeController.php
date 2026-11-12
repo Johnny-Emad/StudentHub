@@ -7,6 +7,7 @@ use App\Models\Exam;
 use App\Models\ExamGrade;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ExamGradeController extends Controller
@@ -52,6 +53,33 @@ class ExamGradeController extends Controller
         }
 
         $students = $studentsQuery->paginate(20)->withQueryString();
+
+        // Calculate each student's weighted average in this subject.
+        $studentIds = $students->getCollection()->pluck('id');
+
+        $averages = DB::table('exam_grades')
+            ->join('exams', 'exam_grades.exam_id', '=', 'exams.id')
+            ->where('exams.subject_id', $exam->subject_id)
+            ->where('exams.grade', $exam->grade)
+            ->where('exams.class_section', $exam->class_section)
+            ->whereIn('exam_grades.student_id', $studentIds)
+            ->select('exam_grades.student_id')
+            ->selectRaw('SUM(exam_grades.marks_obtained) as total_obtained')
+            ->selectRaw('SUM(exams.total_marks) as total_possible')
+            ->groupBy('exam_grades.student_id')
+            ->get()
+            ->keyBy('student_id');
+
+        foreach ($students as $student) {
+            $averageData = $averages->get($student->id);
+
+            $student->subject_average = $averageData
+                ? round(
+                    ($averageData->total_obtained / $averageData->total_possible) * 100,
+                    2
+                )
+                : null;
+        }
 
         return view('exams.grades', compact(
             'exam',
@@ -146,7 +174,10 @@ class ExamGradeController extends Controller
         Exam $exam,
         ExamGrade $examGrade
     ): Student {
-        abort_unless((int) $examGrade->exam_id === (int) $exam->id, 404);
+        abort_unless(
+            (int) $examGrade->exam_id === (int) $exam->id,
+            404
+        );
 
         $student = Student::findOrFail($examGrade->student_id);
 
