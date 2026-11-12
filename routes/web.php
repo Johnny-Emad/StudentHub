@@ -2,13 +2,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\ExamGradeController;
-use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\SubjectStatisticsController;
+use App\Http\Controllers\ClassStatisticsController;
 use App\Http\Controllers\Admin\TeacherApprovalController;
 
 Route::get('/', function () {
@@ -17,10 +19,12 @@ Route::get('/', function () {
 
 Route::middleware('auth')->group(function () {
 
+    // Dashboard
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
 
+    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->name('profile.edit');
 
@@ -30,8 +34,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
 
+    // Students Management
     Route::resource('students', StudentController::class);
 
+    // Attendance Management
     Route::get('/attendance', [AttendanceController::class, 'index'])
         ->name('attendance.index');
 
@@ -47,11 +53,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendance/dashboard', [AttendanceController::class, 'dashboard'])
         ->name('attendance.dashboard');
 
+    // Admin Routes
     Route::middleware('admin')
         ->prefix('admin')
         ->name('admin.')
         ->group(function () {
 
+            // Teacher Approval
             Route::get('/teachers', [TeacherApprovalController::class, 'index'])
                 ->name('teachers.index');
 
@@ -65,14 +73,23 @@ Route::middleware('auth')->group(function () {
                 [TeacherApprovalController::class, 'reject']
             )->name('teachers.reject');
 
-            Route::get('/subjects/statistics', [
-                SubjectStatisticsController::class,
-                'index'
-            ])->name('subjects.statistics');
+            // Subject Statistics
+            Route::get(
+                '/subjects/statistics',
+                [SubjectStatisticsController::class, 'index']
+            )->name('subjects.statistics');
 
+            // Class Statistics
+            Route::get(
+                '/statistics/classes',
+                [ClassStatisticsController::class, 'index']
+            )->name('statistics.classes');
+
+            // Subjects Management
             Route::resource('subjects', SubjectController::class)
                 ->except(['show']);
 
+            // Assign Subjects to Grades
             Route::get(
                 '/subjects/{subject}/grades',
                 [SubjectController::class, 'editGrades']
@@ -83,11 +100,13 @@ Route::middleware('auth')->group(function () {
                 [SubjectController::class, 'updateGrades']
             )->name('subjects.grades.update');
 
+            // Exam Target Students
             Route::get(
                 '/exams/{exam}/students',
                 [ExamController::class, 'targetStudents']
             )->name('exams.students');
 
+            // Bulk Grades Entry
             Route::get(
                 '/exams/{exam}/grades',
                 [ExamGradeController::class, 'create']
@@ -98,6 +117,7 @@ Route::middleware('auth')->group(function () {
                 [ExamGradeController::class, 'store']
             )->name('exams.grades.store');
 
+            // Individual Grade Editing
             Route::get(
                 '/exams/{exam}/grades/{examGrade}/edit',
                 [ExamGradeController::class, 'edit']
@@ -108,6 +128,7 @@ Route::middleware('auth')->group(function () {
                 [ExamGradeController::class, 'update']
             )->name('exams.grades.update');
 
+            // Exams Management
             Route::resource('exams', ExamController::class)
                 ->except(['show']);
         });
