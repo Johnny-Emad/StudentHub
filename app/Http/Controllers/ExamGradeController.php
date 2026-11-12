@@ -6,57 +6,113 @@ use App\Models\Exam;
 use App\Models\ExamGrade;
 use App\Models\Student;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class ExamGradeController extends Controller
 {
-    public function create(Exam $exam)
+    public function create(Request $request, Exam $exam)
     {
-        $students = Student::where('grade', $exam->grade)
-            ->where('class_section', $exam->class_section)
-            ->with(['examGrades' => function ($query) use ($exam) {
+        $status = $request->query('status');
+
+        if (!in_array($status, ['graded', 'not_graded', null], true)) {
+            $status = null;
+        }
+
+        $baseQuery = Student::query()
+            ->where('grade', $exam->grade)
+            ->where('class_section', $exam->class_section);
+
+        $gradedCount = (clone $baseQuery)
+            ->whereHas('examGrades', function ($query) use ($exam) {
                 $query->where('exam_id', $exam->id);
-            }])
+            })
+            ->count();
+
+        $totalStudents = (clone $baseQuery)->count();
+
+        $notGradedCount = $totalStudents - $gradedCount;
+
+        $studentsQuery = Student::query()
+            ->where('grade', $exam->grade)
+            ->where('class_section', $exam->class_section);
+
+        if ($status === 'graded') {
+            $studentsQuery->whereHas('examGrades', function ($query) use ($exam) {
+                $query->where('exam_id', $exam->id);
+            });
+        } elseif ($status === 'not_graded') {
+            $studentsQuery->whereDoesntHave('examGrades', function ($query) use ($exam) {
+                $query->where('exam_id', $exam->id);
+            });
+        }
+
+        $students = $studentsQuery
+            ->with([
+                'examGrades' => function ($query) use ($exam) {
+                    $query->where('exam_id', $exam->id);
+                }
+            ])
             ->orderBy('first_name')
             ->orderBy('last_name')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('exams.grades', compact('exam', 'students'));
+        return view('exams.grades', compact(
+            'exam',
+            'students',
+            'totalStudents',
+            'gradedCount',
+            'notGradedCount',
+            'status'
+        ));
     }
 
     public function store(Request $request, Exam $exam)
     {
         $validated = $request->validate([
             'grades' => ['required', 'array'],
-
             'grades.*' => [
-                'required',
+                'nullable',
                 'numeric',
                 'min:0',
                 'max:' . $exam->total_marks,
             ],
         ]);
 
-        $studentIds = Student::where('grade', $exam->grade)
+        $grades = array_filter(
+            $validated['grades'],
+            fn($value) => $value !== null && $value !== ''
+        );
+
+        $studentIds = array_keys($grades);
+
+        $validStudents = Student::query()
+            ->whereIn('id', $studentIds)
+            ->where('grade', $exam->grade)
             ->where('class_section', $exam->class_section)
             ->pluck('id')
             ->map(fn($id) => (string) $id)
             ->all();
 
-        foreach (array_keys($validated['grades']) as $studentId) {
-            if (!in_array((string) $studentId, $studentIds, true)) {
-                throw ValidationException::withMessages([
-                    'grades' => 'One or more selected students do not belong to this exam.',
-                ]);
-            }
+        $invalidStudents = array_diff(
+            array_map('strval', $studentIds),
+            $validStudents
+        );
+
+        if (!empty($invalidStudents)) {
+            return back()->withErrors([
+                'grades' => 'One or more students do not belong to this exam.',
+            ])->withInput();
         }
 
-        foreach ($validated['grades'] as $studentId => $marks) {
-            $exam->grades()->updateOrCreate(
-                ['student_id' => $studentId],
-                ['marks_obtained' => $marks]
-            );
-        }
+        DB::transaction(function () use ($exam, $grades) {
+            foreach ($grades as $studentId => $marks) {
+                $exam->grades()->updateOrCreate(
+                    ['student_id' => $studentId],
+                    ['marks_obtained' => $marks]
+                );
+            }
+        });
 
         return redirect()
             ->route('admin.exams.grades.create', $exam)
@@ -65,9 +121,7 @@ class ExamGradeController extends Controller
 
     public function edit(Exam $exam, ExamGrade $examGrade)
     {
-        $this->ensureGradeBelongsToExam($exam, $examGrade);
-
-        $student = $examGrade->student;
+        $student = $this->ensureGradeBelongsToExam($exam, $examGrade);
 
         return view('exams.grade-edit', compact(
             'exam',
@@ -92,7 +146,9 @@ class ExamGradeController extends Controller
             ],
         ]);
 
-        $examGrade->update($validated);
+        $examGrade->update([
+            'marks_obtained' => $validated['marks_obtained'],
+        ]);
 
         return redirect()
             ->route('admin.exams.grades.create', $exam)
@@ -102,16 +158,20 @@ class ExamGradeController extends Controller
     private function ensureGradeBelongsToExam(
         Exam $exam,
         ExamGrade $examGrade
-    ): void {
-        abort_unless($examGrade->exam_id === $exam->id, 404);
+    ): Student {
+        abort_unless(
+            (int) $examGrade->exam_id === (int) $exam->id,
+            404
+        );
 
-        $student = $examGrade->student;
+        $student = Student::findOrFail($examGrade->student_id);
 
         abort_unless(
-            $student &&
-                $student->grade === $exam->grade &&
+            $student->grade === $exam->grade &&
                 $student->class_section === $exam->class_section,
             404
         );
+
+        return $student;
     }
 }
