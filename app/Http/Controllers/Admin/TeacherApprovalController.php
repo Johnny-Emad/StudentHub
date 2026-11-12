@@ -26,11 +26,32 @@ class TeacherApprovalController extends Controller
         return view('admin.teachers.index', compact('teachers'));
     }
 
+    public function approve(User $user): RedirectResponse
+    {
+        abort_unless($user->role === 'teacher', 404);
+
+        $user->update(['status' => 'approved']);
+
+        return redirect()
+            ->route('admin.teachers.index')
+            ->with('success', 'Teacher account approved successfully.');
+    }
+
+    public function reject(User $user): RedirectResponse
+    {
+        abort_unless($user->role === 'teacher', 404);
+
+        $user->update(['status' => 'rejected']);
+
+        return redirect()
+            ->route('admin.teachers.index')
+            ->with('success', 'Teacher account rejected successfully.');
+    }
+
     public function update(User $user, string $status): RedirectResponse
     {
         abort_unless(
             $user->role === 'teacher' &&
-                $user->status === 'pending' &&
                 in_array($status, ['approved', 'rejected'], true),
             404
         );
