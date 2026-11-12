@@ -12,6 +12,7 @@ use App\Http\Controllers\ExamGradeController;
 use App\Http\Controllers\SubjectStatisticsController;
 use App\Http\Controllers\ClassStatisticsController;
 use App\Http\Controllers\GradeStatisticsController;
+use App\Http\Controllers\SchoolStatisticsController;
 use App\Http\Controllers\Admin\TeacherApprovalController;
 
 Route::get('/', function () {
@@ -20,10 +21,12 @@ Route::get('/', function () {
 
 Route::middleware('auth')->group(function () {
 
+    // Dashboard
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
 
+    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->name('profile.edit');
 
@@ -52,7 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendance/dashboard', [AttendanceController::class, 'dashboard'])
         ->name('attendance.dashboard');
 
-    // Admin
+    // Admin Routes
     Route::middleware('admin')
         ->prefix('admin')
         ->name('admin.')
@@ -90,6 +93,12 @@ Route::middleware('auth')->group(function () {
                 [GradeStatisticsController::class, 'index']
             )->name('statistics.grades');
 
+            // School Statistics
+            Route::get(
+                '/statistics/school',
+                [SchoolStatisticsController::class, 'index']
+            )->name('statistics.school');
+
             // Subjects
             Route::resource('subjects', SubjectController::class)
                 ->except(['show']);
@@ -104,7 +113,7 @@ Route::middleware('auth')->group(function () {
                 [SubjectController::class, 'updateGrades']
             )->name('subjects.grades.update');
 
-            // Exams
+            // Exams: Target Students
             Route::get(
                 '/exams/{exam}/students',
                 [ExamController::class, 'targetStudents']
@@ -131,6 +140,7 @@ Route::middleware('auth')->group(function () {
                 [ExamGradeController::class, 'update']
             )->name('exams.grades.update');
 
+            // Exams CRUD
             Route::resource('exams', ExamController::class)
                 ->except(['show']);
         });
