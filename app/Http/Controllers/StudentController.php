@@ -94,6 +94,7 @@ class StudentController extends Controller
                 'size:1',
                 'regex:/^[A-Z]$/',
             ],
+            'notes' => ['nullable', 'string', 'max:5000'],
             'status' => 'required|in:active,inactive',
         ]);
 
@@ -148,6 +149,7 @@ class StudentController extends Controller
                 'size:1',
                 'regex:/^[A-Z]$/',
             ],
+            'notes' => ['nullable', 'string', 'max:5000'],
             'status' => 'required|in:active,inactive',
         ]);
 

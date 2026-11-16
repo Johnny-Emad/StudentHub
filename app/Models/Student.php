@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'grade',
     'class_section',
     'status',
+    'notes',
 ])]
 class Student extends Model
 {
