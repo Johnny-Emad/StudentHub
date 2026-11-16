@@ -83,8 +83,17 @@ class StudentController extends Controller
             'date_of_birth' => 'nullable|date|before_or_equal:today',
             'gender' => 'nullable|in:male,female',
             'address' => 'nullable|string|max:1000',
-            'grade' => 'required|string|max:50',
-            'class_section' => 'required|string|size:1',
+            'grade' => [
+                'required',
+                'integer',
+                'between:1,12',
+            ],
+            'class_section' => [
+                'required',
+                'string',
+                'size:1',
+                'regex:/^[A-Z]$/',
+            ],
             'status' => 'required|in:active,inactive',
         ]);
 
@@ -128,8 +137,17 @@ class StudentController extends Controller
             'date_of_birth' => 'nullable|date|before_or_equal:today',
             'gender' => 'nullable|in:male,female',
             'address' => 'nullable|string|max:1000',
-            'grade' => 'required|string|max:50',
-            'class_section' => 'required|string|size:1',
+            'grade' => [
+                'required',
+                'integer',
+                'between:1,12',
+            ],
+            'class_section' => [
+                'required',
+                'string',
+                'size:1',
+                'regex:/^[A-Z]$/',
+            ],
             'status' => 'required|in:active,inactive',
         ]);
 

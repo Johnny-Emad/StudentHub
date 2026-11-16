@@ -24,8 +24,8 @@ return new class extends Migration
 
             $table->text('address')->nullable();
 
-            $table->string('grade');
-            $table->string('class_section', 10);
+            $table->unsignedTinyInteger('grade');
+            $table->string('class_section', 1);
 
             $table->string('status')->default('active');
 
