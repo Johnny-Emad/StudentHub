@@ -65,12 +65,12 @@
                 </div>
 
                 <div class="flex-1 min-w-36">
-                    <label for="class_section" class="form-label">Section</label>
+                    <label for="class_section" class="form-label">Class</label>
                     <select name="class_section" id="class_section" class="form-input">
-                        <option value="">All Sections</option>
+                        <option value="">All Classes</option>
                         @foreach ($sections as $section)
                             <option value="{{ $section }}" @selected(request('class_section') == $section)>
-                                Section {{ $section }}
+                                Class {{ $section }}
                             </option>
                         @endforeach
                     </select>
@@ -102,7 +102,7 @@
                             <th class="table-header">Student</th>
                             <th class="table-header">Code</th>
                             <th class="table-header">Grade</th>
-                            <th class="table-header">Section</th>
+                            <th class="table-header">Class</th>
                             <th class="table-header">Status</th>
                             <th class="table-header text-right">Action</th>
                         </tr>

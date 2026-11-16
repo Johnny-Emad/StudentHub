@@ -28,7 +28,7 @@
                 <span class="badge-blue">{{ $exam->grade }}</span>
             </div>
             <div>
-                <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Section</p>
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Class</p>
                 <p class="text-sm font-semibold text-gray-900">{{ $exam->class_section }}</p>
             </div>
             <div>
@@ -59,7 +59,7 @@
                         <th class="table-header">Last Name</th>
                         <th class="table-header">Email</th>
                         <th class="table-header">Grade</th>
-                        <th class="table-header">Section</th>
+                        <th class="table-header">Class</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
@@ -78,7 +78,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="py-16 text-center">
-                                <p class="text-sm text-gray-500">No students found for this exam's grade and section.</p>
+                                <p class="text-sm text-gray-500">No students found for this exam's grade and class.</p>
                             </td>
                         </tr>
                     @endforelse

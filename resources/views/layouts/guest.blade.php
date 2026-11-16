@@ -59,7 +59,7 @@
                         </span>
                         <div>
                             <p class="text-sm font-semibold text-white">Student records</p>
-                            <p class="text-sm text-indigo-200/80 mt-0.5">Manage enrollment, grades, and sections in one place.</p>
+                            <p class="text-sm text-indigo-200/80 mt-0.5">Manage enrollment, grades, and classes in one place.</p>
                         </div>
                     </li>
                     <li class="flex items-start gap-3">

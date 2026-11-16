@@ -28,7 +28,7 @@
                             <th class="table-header">#</th>
                             <th class="table-header">Grade</th>
                             <th class="table-header">Students</th>
-                            <th class="table-header">Sections</th>
+                            <th class="table-header">Classes</th>
                             <th class="table-header">Subjects</th>
                             <th class="table-header">Exams</th>
                             <th class="table-header">Grades Recorded</th>

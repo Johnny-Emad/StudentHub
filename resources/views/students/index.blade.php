@@ -65,12 +65,12 @@
                     @endforeach
                 </select>
 
-                {{-- Class Section --}}
+                {{-- Class --}}
                 <select name="class_section" class="form-input w-auto min-w-36">
-                    <option value="">All Sections</option>
+                    <option value="">All Classes</option>
                     @foreach($sections as $section)
                         <option value="{{ $section }}" {{ request('class_section') === $section ? 'selected' : '' }}>
-                            Section {{ $section }}
+                            Class {{ $section }}
                         </option>
                     @endforeach
                 </select>
@@ -109,7 +109,7 @@
                         <th class="table-header">Student</th>
                         <th class="table-header">Code</th>
                         <th class="table-header">Grade</th>
-                        <th class="table-header">Section</th>
+                        <th class="table-header">Class</th>
                         <th class="table-header">Status</th>
                         <th class="table-header text-right">Actions</th>
                     </tr>

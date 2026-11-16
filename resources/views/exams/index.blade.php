@@ -43,7 +43,7 @@
                         <th class="table-header">Exam Title</th>
                         <th class="table-header">Subject</th>
                         <th class="table-header">Grade</th>
-                        <th class="table-header">Section</th>
+                        <th class="table-header">Class</th>
                         <th class="table-header">Date</th>
                         <th class="table-header">Total Marks</th>
                         <th class="table-header text-right">Actions</th>

@@ -105,7 +105,7 @@
                     </div>
 
                     <div>
-                        <label class="form-label">Class Section <span class="text-red-500">*</span></label>
+                        <label class="form-label">Class <span class="text-red-500">*</span></label>
                         <input type="text" name="class_section" value="{{ old('class_section') }}"
                                class="form-input w-full" placeholder="e.g. A" maxlength="1">
                         @error('class_section')<p class="form-error">{{ $message }}</p>@enderror

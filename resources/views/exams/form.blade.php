@@ -80,7 +80,7 @@
 </div>
 
 <div class="mb-3">
-    <label for="class_section" class="form-label">Class Section</label>
+    <label for="class_section" class="form-label">Class</label>
 
     <input
         type="text"

@@ -40,9 +40,9 @@
                 </div>
 
                 <div>
-                    <label class="form-label">Section</label>
+                    <label class="form-label">Class</label>
                     <select name="class_section" class="form-input">
-                        <option value="">All Sections</option>
+                        <option value="">All Classes</option>
                         @foreach ($sections as $section)
                             <option value="{{ $section }}" @selected(request('class_section') == $section)>
                                 {{ $section }}

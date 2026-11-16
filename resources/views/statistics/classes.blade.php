@@ -9,7 +9,7 @@
 
     <div class="mb-5">
         <h1 class="text-xl font-bold text-gray-900">Class Statistics</h1>
-        <p class="text-sm text-gray-500 mt-0.5">Performance breakdown per class and section.</p>
+        <p class="text-sm text-gray-500 mt-0.5">Performance breakdown per class.</p>
     </div>
 
     @if($classes->isEmpty())
@@ -24,7 +24,7 @@
                         <tr class="border-b border-gray-100 bg-gray-50/60">
                             <th class="table-header">#</th>
                             <th class="table-header">Grade</th>
-                            <th class="table-header">Section</th>
+                            <th class="table-header">Class</th>
                             <th class="table-header">Students</th>
                             <th class="table-header">Subjects</th>
                             <th class="table-header">Exams</th>

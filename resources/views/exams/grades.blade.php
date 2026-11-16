@@ -36,7 +36,7 @@
                 <span class="badge-blue">{{ $exam->grade }}</span>
             </div>
             <div>
-                <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Section</p>
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Class</p>
                 <p class="text-sm font-semibold text-gray-900">{{ $exam->class_section }}</p>
             </div>
             <div>

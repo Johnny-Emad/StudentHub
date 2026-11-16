@@ -49,9 +49,9 @@
                 </div>
 
                 <div>
-                    <label for="class_section" class="form-label">Class Section</label>
+                    <label for="class_section" class="form-label">Class</label>
                     <select id="class_section" name="class_section" class="form-input">
-                        <option value="">All Sections</option>
+                        <option value="">All Classes</option>
                         @foreach ($sections as $section)
                             <option value="{{ $section }}" {{ request('class_section') == $section ? 'selected' : '' }}>
                                 {{ $section }}
@@ -97,7 +97,7 @@
                         <th class="table-header">Date</th>
                         <th class="table-header">Student</th>
                         <th class="table-header">Grade</th>
-                        <th class="table-header">Section</th>
+                        <th class="table-header">Class</th>
                         <th class="table-header">Status</th>
                         <th class="table-header">Recorded By</th>
                     </tr>
