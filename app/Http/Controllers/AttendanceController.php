@@ -24,7 +24,8 @@ class AttendanceController extends Controller
             ->with(['attendances' => fn($query) =>
             $query->where('date', $date)])
             ->orderBy('first_name')
-            ->get();
+            ->paginate(50)
+            ->withQueryString();
 
         $grades = Student::select('grade')
             ->distinct()
@@ -61,30 +62,18 @@ class AttendanceController extends Controller
         }
 
         DB::transaction(function () use ($validated, $request) {
-            $existing = Attendance::where('date', $validated['date'])
-                ->whereIn('student_id', array_keys($validated['attendance']))
-                ->exists();
-
-            if ($existing) {
-                throw ValidationException::withMessages([
-                    'attendance' => 'Attendance already exists for one or more selected students.',
-                ]);
+            foreach ($validated['attendance'] as $studentId => $status) {
+                Attendance::updateOrCreate(
+                    [
+                        'student_id' => $studentId,
+                        'date' => $validated['date'],
+                    ],
+                    [
+                        'status' => $status,
+                        'marked_by' => $request->user()->id,
+                    ]
+                );
             }
-
-            $now = now();
-
-            $records = collect($validated['attendance'])
-                ->map(fn($status, $studentId) => [
-                    'student_id' => $studentId,
-                    'date' => $validated['date'],
-                    'status' => $status,
-                    'marked_by' => $request->user()->id,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ])
-                ->all();
-
-            Attendance::insert($records);
         });
 
         return back()->with('success', 'Attendance saved successfully.');
@@ -140,10 +129,15 @@ class AttendanceController extends Controller
             ->distinct()
             ->orderBy('class_section')
             ->pluck('class_section');
-select('id', 'first_name', 'last_name')
-            ->
-            
-        $students = Student::orderBy('first_name')->get();
+
+        $students = Student::query()
+            ->select('id', 'first_name', 'last_name')
+            ->when(!empty($validated['grade']), fn($query) =>
+            $query->where('grade', $validated['grade']))
+            ->when(!empty($validated['class_section']), fn($query) =>
+            $query->where('class_section', $validated['class_section']))
+            ->orderBy('first_name')
+            ->get();
 
         return view('attendance.history', compact(
             'attendances',
