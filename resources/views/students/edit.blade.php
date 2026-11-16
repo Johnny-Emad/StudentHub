@@ -123,6 +123,25 @@
                 </div>
             </div>
 
+            {{-- Notes --}}
+            <div class="card p-6 mb-6">
+                <h2 class="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="w-5 h-5 rounded bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">3</span>
+                    Notes
+                </h2>
+                <div x-data="{ count: {{ strlen(old('notes', $student->notes ?? '')) }} }">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="form-label !mb-0">Student Notes <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <span class="text-xs text-gray-400" x-text="count + ' / 5000'"></span>
+                    </div>
+                    <textarea name="notes" rows="4" maxlength="5000"
+                              @input="count = $el.value.length"
+                              class="form-input w-full resize-y"
+                              placeholder="Add any additional information, observations, or context about this student...">{{ old('notes', $student->notes) }}</textarea>
+                    @error('notes')<p class="form-error">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
             {{-- Form actions --}}
             <div class="flex items-center justify-between">
                 <a href="{{ route('students.show', $student) }}" class="btn-secondary flex items-center gap-2">
