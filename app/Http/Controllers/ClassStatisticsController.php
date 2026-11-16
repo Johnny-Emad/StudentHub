@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ClassStatisticsController extends Controller
 {
     public function index()
     {
+        $classes = Cache::remember('stats.classes', 300, function () {
         $classes = Student::query()
             ->select('grade', 'class_section')
             ->selectRaw('COUNT(*) as students_count')
@@ -77,6 +79,9 @@ class ClassStatisticsController extends Controller
                 ? round($studentAverages->min(), 2)
                 : null;
         }
+
+            return $classes;
+        });
 
         return view('statistics.classes', compact('classes'));
     }

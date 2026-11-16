@@ -20,7 +20,7 @@
             $stats = [
                 [
                     'label'   => 'Total Students',
-                    'value'   => \App\Models\Student::count(),
+                    'value'   => $dashboardStats['total'],
                     'change'  => '+12%',
                     'up'      => true,
                     'color'   => 'indigo',
@@ -28,7 +28,7 @@
                 ],
                 [
                     'label'   => 'Active',
-                    'value'   => \App\Models\Student::where('status', 'active')->count(),
+                    'value'   => $dashboardStats['active'],
                     'change'  => '+5%',
                     'up'      => true,
                     'color'   => 'emerald',
@@ -36,7 +36,7 @@
                 ],
                 [
                     'label'   => 'Inactive',
-                    'value'   => \App\Models\Student::where('status', 'inactive')->count(),
+                    'value'   => $dashboardStats['inactive'],
                     'change'  => '-2%',
                     'up'      => false,
                     'color'   => 'rose',
@@ -44,7 +44,7 @@
                 ],
                 [
                     'label'   => 'Grade Levels',
-                    'value'   => \App\Models\Student::distinct('grade')->count('grade'),
+                    'value'   => $dashboardStats['grade_levels'],
                     'change'  => null,
                     'up'      => null,
                     'color'   => 'violet',
@@ -176,10 +176,6 @@
                 <h2 class="text-sm font-semibold text-gray-900">Recent Students</h2>
                 <a href="{{ route('students.index') }}" class="text-xs font-medium text-indigo-700 hover:text-indigo-800 transition">View all</a>
             </div>
-
-            @php
-                $recentStudents = \App\Models\Student::latest()->take(5)->get();
-            @endphp
 
             @if ($recentStudents->isEmpty())
                 <div class="flex flex-col items-center justify-center py-10 text-center">

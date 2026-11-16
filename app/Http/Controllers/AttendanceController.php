@@ -16,6 +16,7 @@ class AttendanceController extends Controller
         $date = $request->input('date', now()->toDateString());
 
         $students = Student::query()
+            ->select('id', 'student_code', 'first_name', 'last_name', 'grade', 'class_section')
             ->when($request->filled('grade'), fn($query) =>
             $query->where('grade', $request->grade))
             ->when($request->filled('class_section'), fn($query) =>
@@ -70,14 +71,20 @@ class AttendanceController extends Controller
                 ]);
             }
 
-            foreach ($validated['attendance'] as $studentId => $status) {
-                Attendance::create([
+            $now = now();
+
+            $records = collect($validated['attendance'])
+                ->map(fn($status, $studentId) => [
                     'student_id' => $studentId,
                     'date' => $validated['date'],
                     'status' => $status,
                     'marked_by' => $request->user()->id,
-                ]);
-            }
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])
+                ->all();
+
+            Attendance::insert($records);
         });
 
         return back()->with('success', 'Attendance saved successfully.');
@@ -133,7 +140,9 @@ class AttendanceController extends Controller
             ->distinct()
             ->orderBy('class_section')
             ->pluck('class_section');
-
+select('id', 'first_name', 'last_name')
+            ->
+            
         $students = Student::orderBy('first_name')->get();
 
         return view('attendance.history', compact(

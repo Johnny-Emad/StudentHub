@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class SchoolStatisticsController extends Controller
@@ -18,6 +19,10 @@ class SchoolStatisticsController extends Controller
         $from = $validated['from'] ?? null;
         $to = $validated['to'] ?? null;
 
+        $data = Cache::remember(
+            'stats.school.' . md5(($from ?? '') . '|' . ($to ?? '')),
+            300,
+            function () use ($from, $to) {
         // General school statistics
         $studentsCount = Student::count();
 
@@ -114,7 +119,7 @@ class SchoolStatisticsController extends Controller
             ? round(($presentCount / $attendanceCount) * 100, 2)
             : null;
 
-        return view('statistics.school', compact(
+        return compact(
             'studentsCount',
             'gradesCount',
             'sectionsCount',
@@ -130,6 +135,10 @@ class SchoolStatisticsController extends Controller
             'attendanceRate',
             'from',
             'to'
-        ));
+        );
+            }
+        );
+
+        return view('statistics.school', $data);
     }
 }

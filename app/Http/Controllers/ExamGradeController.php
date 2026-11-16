@@ -111,20 +111,33 @@ class ExamGradeController extends Controller
             ->map(fn($id) => (string) $id)
             ->all();
 
-        foreach ($validated['grades'] as $studentId => $marks) {
+        foreach (array_keys($validated['grades']) as $studentId) {
             if (!in_array((string) $studentId, $validStudentIds, true)) {
                 throw ValidationException::withMessages([
                     'grades' => 'One or more selected students do not belong to this exam.',
                 ]);
             }
+        }
 
-            if ($marks === null || $marks === '') {
-                continue;
-            }
+        $now = now();
 
-            $exam->grades()->updateOrCreate(
-                ['student_id' => $studentId],
-                ['marks_obtained' => $marks]
+        $records = collect($validated['grades'])
+            ->filter(fn($marks) => $marks !== null && $marks !== '')
+            ->map(fn($marks, $studentId) => [
+                'exam_id' => $exam->id,
+                'student_id' => $studentId,
+                'marks_obtained' => $marks,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])
+            ->values()
+            ->all();
+
+        if (!empty($records)) {
+            ExamGrade::upsert(
+                $records,
+                ['exam_id', 'student_id'],
+                ['marks_obtained', 'updated_at']
             );
         }
 

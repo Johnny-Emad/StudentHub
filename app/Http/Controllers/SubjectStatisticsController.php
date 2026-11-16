@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Subject;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class SubjectStatisticsController extends Controller
 {
     public function index()
     {
+        $subjects = Cache::remember('stats.subjects', 300, function () {
         $subjects = Subject::withCount('exams')
             ->orderBy('name')
             ->get();
@@ -69,6 +71,9 @@ class SubjectStatisticsController extends Controller
                 ? round($studentAverages->min(), 2)
                 : null;
         }
+
+            return $subjects;
+        });
 
         return view('subjects.statistics', compact('subjects'));
     }

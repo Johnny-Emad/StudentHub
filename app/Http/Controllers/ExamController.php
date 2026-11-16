@@ -76,9 +76,7 @@ class ExamController extends Controller
             ->orderBy('last_name')
             ->paginate(20);
 
-        $targetCount = Student::where('grade', $exam->grade)
-            ->where('class_section', $exam->class_section)
-            ->count();
+        $targetCount = $students->total();
 
         return view('exams.students', compact(
             'exam',
