@@ -1,103 +1,74 @@
 # Database Overview
 
-StudentHub uses **MySQL 8.0+** as its database — it is the officially supported and configured engine (`DB_CONNECTION=mysql` in `.env.example`). The schema is managed entirely through Laravel migrations. No stored procedures, triggers, or views are used.
+## Engine support
 
-> **Note on SQLite:** SQLite is configured only for the automated test suite (`phpunit.xml` uses an in-memory SQLite database). It is not a supported development or production database for this application.
-
----
-
-## Tables Summary
-
-### Application tables
-
-| Table | Purpose |
+| Engine | Status |
 |---|---|
-| `users` | Application user accounts (teachers and admins) |
-| `students` | Student records (the core entity of the system) |
-| `attendances` | Daily presence or absence record per student |
-| `subjects` | Subject catalogue (e.g., Mathematics, Science) |
-| `grade_subject` | Pivot — which grade levels a subject applies to |
-| `exams` | Exam definitions scoped to a subject, grade, and class section |
-| `exam_grades` | Individual student mark per exam |
+| **MySQL 8.0+** | **Officially supported.** `.env.example` sets `DB_CONNECTION=mysql`; this is the tested development configuration |
+| SQLite | Used **only** by the automated test suite via `phpunit.xml` (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`). Not a supported development database |
 
-### Laravel system tables
+The MySQL connection uses `utf8mb4` / `utf8mb4_unicode_ci`, `strict` mode, and persistent connections disabled (`config/database.php`).
 
-Created by the framework migrations (`0001_01_01_*`, `0001_01_01_000001`, `0001_01_01_000002`) and not used by application business logic:
+### Compatibility notes
 
-| Table | Purpose |
-|---|---|
-| `migrations` | Tracks which migrations have run |
-| `password_reset_tokens` | Laravel's built-in password reset token store |
-| `sessions` | Database session storage (`SESSION_DRIVER=database`) |
-| `cache`, `cache_locks` | Database cache store (`CACHE_STORE=database`) |
-| `jobs`, `job_batches`, `failed_jobs` | Database queue tables (`QUEUE_CONNECTION=database`) |
+- `attendances.status` is a MySQL `enum('present','absent')`. SQLite has no native enum — Laravel emulates it as a `varchar` with a `check` constraint in newer versions, which is why tests can run at all.
+- `students.grade` is `unsignedTinyInteger` while `grade_subject.grade`, `exams.grade` are `string`. Joins between them rely on MySQL's implicit numeric↔string coercion — see [database-design-decisions.md](database-design-decisions.md).
+- `whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?")` in `StudentController` is standard SQL and works on both engines.
+- Statistics use `selectRaw('SUM(...)')`, `whereDate()`, and `groupBy` — all portable.
 
----
+## Table inventory
 
-## Relationships
+### Application tables (7)
 
-### Core Relationships
+| Table | Purpose | Key constraints |
+|---|---|---|
+| `users` | Teacher/admin accounts with role + approval status | `email` unique |
+| `students` | Student registry | `student_code` unique, `email` unique (nullable) |
+| `attendances` | One present/absent record per student per day | `unique(student_id, date)` |
+| `subjects` | Subject catalogue | `name` unique |
+| `grade_subject` | Which subjects are taught in which grades | `unique(subject_id, grade)` |
+| `exams` | Exam definitions targeting subject+grade+section | indexes on `(grade, class_section)` and `exam_date` |
+| `exam_grades` | Marks per student per exam | `unique(exam_id, student_id)` |
 
+### Laravel framework tables (8)
+
+| Table | Created by | Used for |
+|---|---|---|
+| `migrations` | framework | Migration tracking |
+| `password_reset_tokens` | `0001_01_01_000000` | Password reset flow |
+| `sessions` | `0001_01_01_000000` | `SESSION_DRIVER=database` |
+| `cache` | `0001_01_01_000001` | `CACHE_STORE=database` |
+| `cache_locks` | `0001_01_01_000001` | Cache locks |
+| `jobs` | `0001_01_01_000002` | `QUEUE_CONNECTION=database` (unused) |
+| `job_batches` | `0001_01_01_000002` | Batch jobs (unused) |
+| `failed_jobs` | `0001_01_01_000002` | Failed jobs (unused) |
+
+## Entity relationships at a glance
+
+```mermaid
+erDiagram
+    USERS ||--o{ ATTENDANCES : "marked_by (nullable)"
+    STUDENTS ||--o{ ATTENDANCES : "student_id"
+    SUBJECTS ||--o{ GRADE_SUBJECT : "subject_id"
+    SUBJECTS ||--o{ EXAMS : "subject_id"
+    EXAMS ||--o{ EXAM_GRADES : "exam_id"
+    STUDENTS ||--o{ EXAM_GRADES : "student_id"
 ```
-User (1) ─────── (N) Attendance
-                       via marked_by
 
-Student (1) ──── (N) Attendance
-Student (1) ──── (N) ExamGrade
+There is deliberately **no `classes`/`sections` table** — a "class" is the pair `(students.grade, students.class_section)`, and exams/attendance reference that pair by value, not by foreign key. See [database-design-decisions.md](database-design-decisions.md) for the trade-offs.
 
-Subject (1) ──── (N) GradeSubject
-Subject (1) ──── (N) Exam
+## Migration history (application migrations only)
 
-Exam (1) ──────── (N) ExamGrade
-```
-
-### Key Design Decisions
-
-**Mixed grade types** — `students.grade` is an `unsignedTinyInteger` (validated as an integer between 1 and 12), while `exams.grade` and `grade_subject.grade` are `string` columns that store the grade number as text (e.g., `"5"`). MySQL coerces the types during comparisons, and the application validates grade values against real student data rather than a foreign key. There is no dedicated grades/year-groups table.
-
-**Class section as a single character** — `students.class_section` is a `VARCHAR(1)` validated as a single uppercase letter (`size:1`, `regex:/^[A-Z]$/`). `exams.class_section` is `VARCHAR(10)`, but exam validation requires the value to exist in `students.class_section` for the chosen grade.
-
-**No teacher–student assignment** — there is no direct relationship between a `User` (teacher) and specific students or classes. Any approved user can mark attendance for any student.
-
-**Soft deletes are not used** — all deletes are hard deletes. The `cascadeOnDelete()` constraints ensure that deleting a student removes their attendance and exam grade records automatically.
-
----
-
-## Cascade Delete Chains
-
-| Parent deleted | Cascaded children |
+| Migration | Effect |
 |---|---|
-| `students` row | All `attendances` rows with that `student_id`; all `exam_grades` rows with that `student_id` |
-| `subjects` row | All `grade_subject` rows with that `subject_id`; all `exams` rows with that `subject_id` |
-| `exams` row | All `exam_grades` rows with that `exam_id` |
-| `users` row | `attendances.marked_by` is set to `NULL` (nullOnDelete) |
+| `2026_11_03_182612_create_students_table` | Creates `students` — **already includes `notes`** |
+| `2026_11_09_132450_create_attendances_table` | Creates `attendances` with unique `(student_id, date)` |
+| `2026_11_09_193355_create_subjects_table` | Creates `subjects` |
+| `2026_11_09_193416_create_grade_subjects_table` | Creates `grade_subject` pivot |
+| `2026_11_09_195725_create_exams_table` | Creates `exams` |
+| `2026_11_09_214149_create_exam_grades_table` | Creates `exam_grades` |
+| `2026_11_12_164107_fix_missing_columns_in_exams_table` | Defensive `hasColumn`/`hasIndex` guards — no-ops on a clean install |
+| `2026_11_16_223616_add_notes_to_students_table` | Adds `students.notes` — **duplicate; breaks fresh installs** |
+| `2026_11_17_000000_add_performance_indexes` | Adds indexes on `students(grade, class_section, status)` and `attendances(date, status)` |
 
----
-
-## Unique Constraints
-
-| Table | Unique columns |
-|---|---|
-| `users` | `email` |
-| `students` | `student_code` only — `email` is **nullable with no database unique constraint**; uniqueness is enforced at the application layer by `StudentController` validation |
-| `subjects` | `name` |
-| `attendances` | `(student_id, date)` — prevents duplicate attendance records for the same student on the same day |
-| `exam_grades` | `(exam_id, student_id)` — prevents recording two marks for the same student in the same exam |
-| `grade_subject` | `(subject_id, grade)` — prevents assigning the same subject to the same grade twice |
-
----
-
-## Indexes
-
-| Table | Index columns | Source migration | Purpose |
-|---|---|---|---|
-| `exams` | `(grade, class_section)` | `create_exams_table` | Fast lookup of exams by class |
-| `exams` | `exam_date` | `create_exams_table` | Fast date-range filtering |
-| `students` | `grade` | `add_performance_indexes` | Filtering and statistics |
-| `students` | `class_section` | `add_performance_indexes` | Filtering and statistics |
-| `students` | `status` | `add_performance_indexes` | Status filtering |
-| `students` | `(grade, class_section)` | `add_performance_indexes` | Composite class lookup |
-| `attendances` | `date` | `add_performance_indexes` | Date-range filtering |
-| `attendances` | `status` | `add_performance_indexes` | Status aggregation |
-| `sessions` | `user_id` | `create_users_table` | Laravel session lookup |
-| `sessions` | `last_activity` | `create_users_table` | Session garbage collection |
+> ⚠️ The duplicate `notes` migration is a **verified bug**: `php artisan migrate` on an empty database fails with `duplicate column name: notes`, which also breaks `php artisan test`. See [project-status.md](../project-status.md).

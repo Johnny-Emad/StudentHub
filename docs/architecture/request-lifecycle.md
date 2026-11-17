@@ -1,144 +1,104 @@
 # Request Lifecycle
 
-This document traces a complete HTTP request through StudentHub using a concrete example: **an admin submitting the form to create a new exam**.
+A traced walkthrough of how a request flows through StudentHub, using a real example: **an admin marking attendance** (`POST /attendance`).
 
----
+## Example: `POST /attendance` (mark daily attendance)
 
-## Example: `POST /admin/exams`
-
-### Step 1 — Browser
-
-The admin fills in the exam creation form at `GET /admin/exams/create` and clicks **Create Exam**. The browser sends:
+### 1. HTTP request arrives
 
 ```
-POST /admin/exams
-Content-Type: application/x-www-form-urlencoded
-Cookie: laravel_session=...
-
-_token=...&title=Midterm+Math&subject_id=3&grade=5&class_section=A&exam_date=2026-12-01&total_marks=100
+POST /attendance
+Cookie: studenthub_session=...
+Body: date=2026-11-17&attendance[12]=present&attendance[15]=absent&_token=...
 ```
 
----
+### 2. Front controller
 
-### Step 2 — Routing
+`public/index.php` loads `bootstrap/app.php`, which returns a configured `Application`:
 
-Laravel loads `routes/web.php`. The request URL `/admin/exams` with method `POST` is matched against:
+- `withRouting` registers `routes/web.php`, `routes/console.php`, and the `/up` health endpoint.
+- `withMiddleware` aliases `admin` → `App\Http\Middleware\AdminMiddleware`.
+- `withExceptions` renders JSON for `api/*` or `Accept: application/json` requests (no API routes exist, so this only affects AJAX).
+
+### 3. Route matching
+
+`routes/web.php` matches:
 
 ```php
-Route::middleware('auth')
-    ->group(function () {
-        Route::middleware('admin')
-            ->prefix('admin')
-            ->name('admin.')
-            ->group(function () {
-                Route::resource('exams', ExamController::class)->except(['show']);
-            });
-    });
+Route::post('/attendance', [AttendanceController::class, 'store'])
+    ->name('attendance.store');
 ```
 
-The resource route resolves `POST /admin/exams` to `ExamController@store`.
+This route sits **inside** `Route::middleware('auth')->group(...)`, so the `auth` middleware runs first.
 
----
+### 4. Middleware
 
-### Step 3 — Middleware: `auth`
-
-Laravel's `auth` middleware checks whether a session-authenticated user exists. If not, the request is redirected to `/login`. In this example, the admin is authenticated, so execution continues.
-
----
-
-### Step 4 — Middleware: `admin`
-
-`AdminMiddleware::handle()` runs:
-
-```php
-if (!Auth::check()) {
-    abort(403, 'Unauthorized access.');
-}
-
-$user = Auth::user();
-
-if ($user->role !== 'admin' || $user->status !== 'approved') {
-    abort(403, 'Unauthorized access.');
-}
-
-return $next($request);
-```
-
-The admin user has `role = 'admin'` and `status = 'approved'`, so the request continues.
-
----
-
-### Step 5 — Controller: `ExamController@store`
-
-The controller's `store` method calls the private `validateExam($request)` helper:
-
-```php
-$validated = $this->validateExam($request);
-```
-
-Validation rules applied:
-
-| Field | Rules |
+| Middleware | Effect for this request |
 |---|---|
-| `title` | required, string, max:255 |
-| `subject_id` | required, integer, exists:subjects,id |
-| `grade` | required, string, must exist in `grade_subject.grade` where `subject_id` matches |
-| `class_section` | required, string, max:10, must exist in `students.class_section` where `grade` matches |
-| `exam_date` | required, date |
-| `total_marks` | required, numeric, gt:0, max:999999.99 |
+| `web` group (sessions, CSRF, cookies) | Validates `_token` against session; loads session |
+| `auth` (`Authenticate`) | If no session user → redirect to `login`. Request has a session, so it passes |
+| `admin` | **Not applied** — `/attendance` is outside the `admin` prefix group. Any approved user (teacher or admin) may mark attendance |
 
-If validation fails, Laravel throws a `ValidationException`, which redirects back with errors flashed to the session.
+> Note: the approval gate is enforced **at login** (`LoginRequest`), not per-request. A user whose status is changed to `rejected` *after* logging in keeps their session until it expires — there is no per-request status re-check.
 
----
-
-### Step 6 — Model Interaction
-
-If validation passes:
+### 5. Controller — `AttendanceController::store()`
 
 ```php
-Exam::create($validated);
+$validated = $request->validate([
+    'date'      => ['required', 'date'],
+    'attendance'=> ['required', 'array', 'min:1'],
+    'attendance.*' => ['required', Rule::in(['present', 'absent'])],
+]);
 ```
 
-Eloquent maps `$validated` to the `exams` table using the `$fillable` attributes defined on the `Exam` model. A SQL `INSERT` is executed:
-
-```sql
-INSERT INTO exams (subject_id, title, grade, class_section, exam_date, total_marks, created_at, updated_at)
-VALUES (3, 'Midterm Math', '5', 'A', '2026-12-01', 100, NOW(), NOW());
-```
-
----
-
-### Step 7 — Response
-
-After a successful insert:
+- Validation failure → redirect back with errors (standard Laravel behavior for web requests).
+- On success, every key of `attendance` is treated as a `student_id`. The controller then verifies **all** IDs exist:
 
 ```php
-return redirect()
-    ->route('admin.exams.index')
-    ->with('success', 'Exam created successfully.');
+if (Student::whereIn('id', $studentIds)->count() !== count($studentIds)) {
+    throw ValidationException::withMessages(['attendance' => 'Invalid student selection.']);
+}
 ```
 
-Laravel returns an HTTP 302 redirect to `/admin/exams`. The success message is flashed to the session.
+### 6. Business logic — database transaction
+
+```php
+DB::transaction(function () use ($validated, $request) {
+    foreach ($validated['attendance'] as $studentId => $status) {
+        Attendance::updateOrCreate(
+            ['student_id' => $studentId, 'date' => $validated['date']],
+            ['status' => $status, 'marked_by' => $request->user()->id]
+        );
+    }
+});
+```
+
+- `updateOrCreate` on the `(student_id, date)` pair — backed by the `unique(['student_id','date'])` index — means re-saving the same day **updates** the record instead of duplicating it.
+- `marked_by` is overwritten with the current user on every save.
+- All rows commit or roll back together.
+
+### 7. Response
+
+```php
+return back()->with('success', 'Attendance saved successfully.');
+```
+
+Redirect back to `/attendance?date=...&grade=...` with a flash message rendered by the Blade view.
 
 ---
 
-### Step 8 — Follow-up GET `/admin/exams`
+## Where each concern lives
 
-The browser follows the redirect. The `ExamController@index` method runs, queries `Exam::with('subject')->latest('exam_date')->paginate(15)`, and renders `exams/index.blade.php`. The layout reads the flashed `success` session key and triggers the Alpine.js toast notification via a `<script>` block in the view.
+| Concern | Location |
+|---|---|
+| Authentication | `auth` middleware + `LoginRequest::authenticate()` |
+| Approval gate | `LoginRequest` (login time only) |
+| Admin authorization | `AdminMiddleware` on `/admin/*` routes |
+| Input validation | Inline `$request->validate()` in controllers; Form Requests for auth/profile |
+| Business rules | Controller methods (transactions, existence checks, cross-field `Rule::exists` validation) |
+| Data integrity | Migration constraints: `unique`, `foreignId()->constrained()`, `enum` |
+| Presentation | Blade views under `resources/views/` |
 
----
+## Contrast: an admin-only request
 
-## Lifecycle Summary
-
-```
-Browser POST /admin/exams
-    │
-    ├── routes/web.php: matched to ExamController@store
-    ├── Middleware: auth → pass
-    ├── Middleware: admin → pass (role=admin, status=approved)
-    ├── ExamController@store()
-    │     ├── validateExam($request) → ValidationException if invalid
-    │     └── Exam::create($validated) → SQL INSERT
-    └── redirect()->route('admin.exams.index')->with('success', ...)
-         └── Browser follows 302 → GET /admin/exams → renders exam list
-```
+`GET /admin/subjects/statistics` additionally passes through `AdminMiddleware`, which aborts with **403** unless `role === 'admin'` **and** `status === 'approved'`. The controller then wraps its queries in `Cache::remember('stats.subjects', 300, ...)` before returning `subjects.statistics`.

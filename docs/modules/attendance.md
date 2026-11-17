@@ -1,100 +1,76 @@
-# Module: Attendance
+# Attendance
 
-## Overview
-
-Attendance is available to **all authenticated users** (teachers and admins). It provides a daily marking sheet, bulk save, single-record updates, a filterable history view, and an attendance statistics dashboard.
-
----
+Daily present/absent marking per student, plus history browsing and an attendance-rate dashboard. Controller: `AttendanceController`; views: `resources/views/attendance/`; routes inside the `auth` group — **available to every approved user**.
 
 ## Routes
 
 | Method | URI | Name | Purpose |
 |---|---|---|---|
 | GET | `/attendance` | `attendance.index` | Daily marking sheet |
-| POST | `/attendance` | `attendance.store` | Bulk-save attendance for a date |
-| PATCH | `/attendance/{attendance}` | `attendance.update` | Update one record |
-| GET | `/attendance/history` | `attendance.history` | Historical records |
-| GET | `/attendance/dashboard` | `attendance.dashboard` | Attendance statistics |
+| POST | `/attendance` | `attendance.store` | Save marks for a date |
+| PATCH | `/attendance/{attendance}` | `attendance.update` | Change a single record's status |
+| GET | `/attendance/history` | `attendance.history` | Filterable record log |
+| GET | `/attendance/dashboard` | `attendance.dashboard` | Attendance-rate stats |
 
----
+## `index()` — the marking sheet
 
-## Controller: `AttendanceController`
+- `date` param defaults to today (`now()->toDateString()`).
+- Lists students (id, code, name, grade, section) with optional `grade`/`class_section` filters, **paginated 50 per page**, ordered by first name.
+- Eager-loads each student's `attendances` **for that date only** (`->where('date', $date)`) so the view can pre-fill existing marks.
+- Filter dropdowns = distinct grade/section values present in `students`.
+- **All students are listed regardless of `status`** — inactive students can be marked.
 
-`app/Http/Controllers/AttendanceController.php`
-
-### `index(Request $request)`
-
-- `date` query param defaults to today.
-- Students are filtered by optional `grade` and `class_section` params, eager-load their `attendances` relation constrained to the selected date, ordered by first name, and paginated at **50 per page**.
-- The view receives distinct `$grades` and `$sections` lists for the filter dropdowns.
-
-### `store(Request $request)`
+## `store()` — bulk save
 
 Validation:
 
 | Field | Rules |
 |---|---|
 | `date` | required, date |
-| `attendance` | required, array, min:1 |
-| `attendance.*` | required, in:present,absent (keyed by `student_id`) |
+| `attendance` | required, array, min 1 |
+| `attendance.*` | required, `in:present,absent` — keys are student IDs |
 
-The controller verifies every submitted `student_id` exists, then inside a `DB::transaction` calls `Attendance::updateOrCreate()` per student keyed on `(student_id, date)`, setting `status` and `marked_by = auth()->id()`. Re-submitting the same date **overwrites** existing records rather than duplicating them (also guaranteed by the unique constraint).
+Logic:
 
-### `update(Request $request, Attendance $attendance)`
+1. Verifies **every** submitted student ID exists (`Student::whereIn('id', ...)->count() === count(...)`), else `ValidationException` "Invalid student selection."
+2. Inside `DB::transaction`, calls `Attendance::updateOrCreate(['student_id','date'], ['status','marked_by' => current user])` per row.
 
-Validates `status` in `present,absent` and updates the record, refreshing `marked_by`.
+**Duplicate prevention** is enforced at two levels: the `unique(student_id, date)` DB index and `updateOrCreate` semantics — re-submitting the same date **updates** existing rows rather than erroring. This is what makes the sheet re-submittable.
 
-### `history(Request $request)`
+## `update()` — single record
 
-Filterable, paginated (20/page) list of attendance records with `student` and `marker` eager-loaded. Filters: `from`, `to` (to >= from), `grade`, `class_section`, `student` (must exist in `students`).
+`PATCH /attendance/{attendance}` validates `status ∈ {present,absent}`, updates the row, sets `marked_by` to the current user. Used for corrections from the history view.
 
-### `dashboard(Request $request)`
+## `history()` — record log
 
-Computes `total`, `present`, `absent`, and `attendanceRate` (percentage, rounded to 2 decimals) over attendance records optionally filtered by date range, grade, and class section (grade/section applied via `whereHas('student')`).
+Filters (all optional, validated):
 
----
-
-## Model: `Attendance`
-
-`app/Models/Attendance.php`
-
-- `student()` — belongsTo `Student`.
-- `marker()` — belongsTo `User` via `marked_by`.
-
----
-
-## Views
-
-| View | Purpose |
+| Param | Rule |
 |---|---|
-| `attendance/index.blade.php` | Daily marking sheet with present/absent controls |
-| `attendance/history.blade.php` | Filterable record list |
-| `attendance/dashboard.blade.php` | Statistics summary |
+| `from` / `to` | date; `to` must be `after_or_equal:from` |
+| `grade` / `class_section` | string — applied via `whereHas('student', ...)` |
+| `student` | integer, `exists:students,id` |
 
----
+Eager-loads `student` + `marker` (the user who marked it), orders by `date` desc, paginates 20. Also returns the filtered student list for the dropdown.
 
-## Database Table: `attendances`
+## `dashboard()` — attendance rate
 
-- `status` is an ENUM(`present`, `absent`).
-- Unique `(student_id, date)` prevents duplicate daily records.
-- `marked_by` FK → `users.id` with `nullOnDelete`.
-- Indexes on `date` and `status` (performance migration).
+Same filter params as history (minus `student`). Computes over the filtered `Attendance` query:
 
-See [database/schema.md](../database/schema.md#attendances).
+- `total`, `present`, `absent` counts
+- `attendanceRate = round(present/total*100, 2)` — `0` when total is 0
 
----
+**Not cached** — unlike the statistics module, this runs live queries each request.
 
-## Cross-Module Interactions
+## Data model interaction
 
-- **Students:** attendance requires existing students; deleting a student cascades their attendance rows.
-- **Users:** `marked_by` records the acting user; deleting a user nulls the column.
-- **Statistics:** `SchoolStatisticsController` computes school-wide attendance rates from this table.
+- `attendances.status` is a DB `enum('present','absent')` — no other statuses (no "late", "excused").
+- `marked_by` → `users.id`, `nullOnDelete` — history survives user deletion.
+- Deleting a student cascade-deletes their attendance rows.
 
----
+## Known gaps
 
-## Current Limitations
-
-- Only `present`/`absent` statuses — no late, excused, or half-day.
-- No per-class timetable or period-level attendance.
-- Marking is all-or-nothing per submitted form; there is no draft state.
-- No attendance alerts or notifications.
+- No per-class roll-call workflow — marking is per-student checkboxes across a paginated list (50/page), so a class larger than 50 spans pages.
+- No "mark all present" shortcut visible in the controller contract (view-level concern).
+- No excuse/notes field on attendance records.
+- Inactive students are not excluded anywhere in this module.

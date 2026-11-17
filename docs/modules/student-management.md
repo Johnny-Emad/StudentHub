@@ -1,128 +1,66 @@
-# Module: Student Management
+# Student Management
 
-## Overview
-
-Student management is the core data module of StudentHub. It provides full CRUD (Create, Read, Update, Delete) for student records, with server-side search, filtering, and pagination on the index view. All routes are protected by the `auth` middleware; both teachers and admins have equal access.
-
----
+Full CRUD for the student registry plus search and filtering. Controller: `StudentController`; views: `resources/views/students/`; routes: `Route::resource('students', ...)` inside the `auth` group — **available to every approved user** (teachers and admins alike).
 
 ## Routes
 
-| Method | URL | Name | Controller Method |
-|---|---|---|---|
-| GET | `/students` | `students.index` | `StudentController@index` |
-| GET | `/students/create` | `students.create` | `StudentController@create` |
-| POST | `/students` | `students.store` | `StudentController@store` |
-| GET | `/students/{student}` | `students.show` | `StudentController@show` |
-| GET | `/students/{student}/edit` | `students.edit` | `StudentController@edit` |
-| PATCH/PUT | `/students/{student}` | `students.update` | `StudentController@update` |
-| DELETE | `/students/{student}` | `students.destroy` | `StudentController@destroy` |
+| Method | URI | Name |
+|---|---|---|
+| GET | `/students` | `students.index` |
+| GET | `/students/create` | `students.create` |
+| POST | `/students` | `students.store` |
+| GET | `/students/{student}` | `students.show` |
+| GET | `/students/{student}/edit` | `students.edit` |
+| PUT/PATCH | `/students/{student}` | `students.update` |
+| DELETE | `/students/{student}` | `students.destroy` |
 
-All routes are registered via `Route::resource('students', StudentController::class)`.
+## Index — search & filters
 
----
+`index()` builds a query with optional request params, paginates **10 per page** (`latest()` first), and preserves query string in pagination links.
 
-## Controller: `StudentController`
-
-### `index(Request $request)` — Student Listing
-
-Supports live filtering through query string parameters:
-
-| Parameter | Filter behaviour |
+| Param | Behavior |
 |---|---|
-| `search` | LIKE match on `student_code`, `first_name`, `last_name`, full name concatenation, `email`, `phone` |
-| `grade` | Exact match on `grade` |
-| `class_section` | Exact match on `class_section` |
-| `status` | Exact match on `status` (`active` or `inactive`) |
+| `search` | `LIKE %term%` across `student_code`, `first_name`, `last_name`, `CONCAT(first_name,' ',last_name)`, `email`, `phone` |
+| `grade` | exact match on `students.grade` |
+| `class_section` | exact match |
+| `status` | exact match (`active`/`inactive`) |
 
-Results are paginated at 10 per page with `withQueryString()` to preserve filters across pages.
+Filter dropdowns are populated from **distinct values actually present in the table** (`Student::distinct()->pluck()`), not a fixed grade 1–12 list — so grades with no students don't appear.
 
-The view also receives dynamic `$grades` and `$sections` arrays derived from distinct values in the `students` table, used to populate filter dropdowns.
+> `CONCAT(first_name, ' ', last_name)` uses `whereRaw` — portable SQL, works on MySQL and SQLite.
 
-### `store(Request $request)` — Validation Rules
+## Validation rules (store & update — identical except unique-ignore)
 
 | Field | Rules |
 |---|---|
-| `student_code` | required, string, max:255, unique:students |
-| `first_name` | required, string, max:100 |
-| `last_name` | required, string, max:100 |
-| `email` | nullable, email, max:255, unique:students |
-| `phone` | nullable, digits:11 |
-| `date_of_birth` | nullable, date, before_or_equal:today |
-| `gender` | nullable, in:male,female |
-| `address` | nullable, string, max:1000 |
-| `grade` | required, integer, between:1,12 |
-| `class_section` | required, string, size:1, regex:/^[A-Z]$/ |
-| `status` | required, in:active,inactive |
-| `notes` | nullable, string, max:5000 |
+| `student_code` | required, string, max 255, **unique** `students.student_code` (ignored self on update) |
+| `first_name` / `last_name` | required, string, max 100 |
+| `email` | nullable, email, max 255, **unique** `students.email` (ignored self on update) |
+| `phone` | nullable, **digits:11** |
+| `date_of_birth` | nullable, date, `before_or_equal:today` |
+| `gender` | nullable, `in:male,female` |
+| `address` | nullable, string, max 1000 |
+| `grade` | required, integer, `between:1,12` |
+| `class_section` | required, string, `size:1`, `regex:/^[A-Z]$/` |
+| `notes` | nullable, string, max 5000 |
+| `status` | required, `in:active,inactive` |
 
-### `update(Request $request, Student $student)` — Validation Rules
+## Business logic
 
-Same as `store()` with these modifications:
-- `student_code`: unique rule ignores the current student's own record.
-- `email`: unique rule ignores the current student's own record.
+- **Create/update** — plain `Student::create($validated)` / `$student->update($validated)`; no transactions needed (single row).
+- **Delete** — `$student->delete()`. DB cascades remove the student's `attendances` and `exam_grades` rows. **There is no confirmation of academic impact and no soft deletes** — deletion is permanent.
+- **Show** — `students.show` displays the record; the model eager-loads nothing (attendances/examGrades relations exist but aren't loaded in `show()`).
 
-### `destroy(Student $student)` — Delete
+## Interactions with other modules
 
-Hard delete. Due to cascade constraints in the database, all `attendances` and `exam_grades` rows for this student are also deleted.
+- `grade` + `class_section` define the class a student belongs to — used by attendance marking, exam targeting (`ExamController@targetStudents`), grade entry, and all statistics.
+- Deleting a student cascades attendance and exam grades — statistics totals shrink retroactively.
+- `status='inactive'` students remain fully manageable and still appear in attendance marking, exam targeting, and grade entry — **no controller filters on status** (only seeders do).
+- `student_code` uniqueness is the only required identifier; there is no auto-generation — staff must invent codes.
 
----
+## Known gaps
 
-## Model: `Student`
-
-```php
-class Student extends Model
-{
-    public function attendances(): HasMany
-    {
-        return $this->hasMany(Attendance::class);
-    }
-
-    public function examGrades(): HasMany
-    {
-        return $this->hasMany(ExamGrade::class);
-    }
-}
-```
-
-Fillable fields: `student_code`, `first_name`, `last_name`, `email`, `phone`, `date_of_birth`, `gender`, `address`, `grade`, `class_section`, `status`, `notes`.
-
----
-
-## Views
-
-| View | Purpose |
-|---|---|
-| `students/index.blade.php` | Paginated table with search bar, grade/section/status dropdowns |
-| `students/create.blade.php` | New student form |
-| `students/edit.blade.php` | Edit student form (pre-populated) |
-| `students/show.blade.php` | Read-only student detail view |
-
----
-
-## Database Table: `students`
-
-See [database/schema.md](../database/schema.md#students) for the full column reference.
-
-Key constraints:
-- `student_code` is unique — the application does not auto-generate it; users enter it manually.
-- `email` is nullable; uniqueness is enforced by validation only (there is no database-level unique constraint on `students.email`).
-- `class_section` is validated as a single character at the application level.
-
----
-
-## Cross-Module Interactions
-
-- **Attendance:** Attendance records are created with a `student_id` FK. Deleting a student cascades to delete all their attendance records.
-- **Exam Grades:** `exam_grades` rows reference `student_id`. Deleting a student cascades to delete all their grades.
-- **Exams:** Exam creation validates that the target `grade` and `class_section` combination exists in the `students` table. If the last student in a class is deleted, that class section may become unavailable for new exams.
-- **Statistics:** All statistics controllers query the `students` table to build their data sets.
-
----
-
-## Current Limitations
-
-- No student photo or document upload.
-- No bulk import (CSV or spreadsheet).
-- Deleting a student is irreversible and silently removes all historical attendance and exam grade data.
-- `grade` is stored as an integer (1–12) in `students`, but as a string in `exams` and `grade_subject`. The mixed types rely on MySQL's implicit type coercion and application-level validation.
+- No bulk import/export (CSV/Excel).
+- No photo or document uploads.
+- `phone` requires exactly 11 digits — rigid for international formats.
+- `grade`/`class_section` have no referential check against `grade_subject` — a student can be enrolled in a grade that has no subjects assigned.

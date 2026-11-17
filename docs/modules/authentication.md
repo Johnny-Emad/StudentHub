@@ -1,114 +1,87 @@
-# Module: Authentication & Profile Management
+# Authentication
 
-## Overview
-
-Authentication in StudentHub is built on Laravel Breeze (session-based). It covers registration, login, logout, password reset, and profile management. A critical extension to the standard Breeze flow is the **approval gate**: every new registration creates a `pending` teacher account, and login is blocked until an admin approves it.
-
----
+Session-based authentication scaffolded with **Laravel Breeze**, customized with a school-specific approval gate. All routes are in `routes/auth.php`; controllers in `app/Http/Controllers/Auth/`.
 
 ## Registration
 
-**Route:** `GET/POST /register`  
-**Controller:** `Auth\RegisteredUserController`  
-**View:** `auth/register.blade.php`
+`GET /register` → `auth.register` → `RegisteredUserController@create`
+`POST /register` → `RegisteredUserController@store`
 
-### Process
+Validation (`store`):
 
-1. User submits name, email, and password.
-2. Validation rules:
-   - `name`: required, string, max:255
-   - `email`: required, lowercase, email, max:255, unique in `users`
-   - `password`: required, confirmed, satisfies `Password::defaults()` (min 8 chars by default)
-3. A new `User` is created with:
-   - `role = 'teacher'` (hardcoded in controller)
-   - `status = 'pending'` (hardcoded in controller)
-4. The `Registered` event is fired (triggers email verification notification if enabled, but `MustVerifyEmail` is commented out in the User model, so no email is sent).
-5. The user is **not** logged in. They are redirected to `/login` with a flash message: *"Your account has been created and is waiting for admin approval."*
+| Field | Rules |
+|---|---|
+| `name` | required, string, max 255 |
+| `email` | required, string, lowercase, email, max 255, unique on `users` |
+| `password` | required, confirmed, `Rules\Password::defaults()` |
 
-> There is no path to self-register as an admin. Admin accounts must be created via the `AdminSeeder` or directly in the database.
+On success the controller **always** creates:
 
----
+```php
+'role'   => 'teacher',
+'status' => 'pending',
+```
 
-## Login & Approval Gate
+then fires `Registered` event and redirects to `login` with the flash *"Your account has been created and is waiting for admin approval."* — the user is **not** logged in automatically.
 
-**Route:** `GET/POST /login`  
-**Controller:** `Auth\AuthenticatedSessionController`  
-**Request:** `Auth\LoginRequest`  
-**View:** `auth/login.blade.php`
+> There is no way to register as admin or student. Admins come only from `AdminSeeder`/SQL.
 
-### Process
+## Login — with approval gate
 
-1. User submits email and password.
-2. `LoginRequest::authenticate()` runs:
-   - Rate limiting: 5 attempts per email+IP; lockout triggers `Lockout` event.
-   - `Auth::attempt()` validates credentials against the database.
-   - If credentials fail, rate limiter is incremented and `ValidationException` is thrown.
-   - If credentials succeed, the user object is retrieved.
-   - **Approval gate:** `if ($user->status !== 'approved')` — the user is immediately logged out and a `ValidationException` is thrown with an appropriate message:
-     - `pending`: *"Your account is waiting for admin approval."*
-     - Any other non-approved status: *"Your account has not been approved."*
-3. If status is `approved`, the session is regenerated and the user is redirected to the intended URL or `/dashboard`.
+`GET /login` → `auth.login`
+`POST /login` → `AuthenticatedSessionController@store` → `LoginRequest`
 
-### Key Security Detail
+`LoginRequest::authenticate()` does three things:
 
-The approval check runs **after** successful credential verification. A rejected teacher who knows their password will pass the credential check but be blocked by the status check. The status check is the last gate before session creation.
+1. **Rate limiting** — `ensureIsNotRateLimited()`: max **5 attempts** per `email|ip` throttle key; throws `Lockout` event + validation error with seconds remaining.
+2. **Credential check** — `Auth::attempt(email, password, remember)`; failure increments the rate limiter and throws `auth.failed`.
+3. **Approval gate** — after successful auth, if `$user->status !== 'approved'` the user is **logged out immediately** and a validation error is thrown:
+   - `pending` → *"Your account is waiting for admin approval."*
+   - anything else → *"Your account has not been approved."*
 
----
+On success: `session()->regenerate()`, redirect to `route('dashboard')` (intended URL honored).
+
+**Important:** the approval check happens **only at login**. A user approved-then-rejected while holding a session stays logged in until the session expires — there is no per-request status middleware.
 
 ## Logout
 
-**Route:** `POST /logout`  
-**Controller:** `Auth\AuthenticatedSessionController@destroy`
+`POST /logout` → `AuthenticatedSessionController@destroy` — `Auth::guard('web')->logout()`, session invalidate, CSRF token regenerate, redirect `/`.
 
-Logs out the current user, invalidates the session, and regenerates the CSRF token. Redirects to `/`.
+## Password reset (Breeze standard)
 
----
+| Route | Name | Purpose |
+|---|---|---|
+| `GET /forgot-password` | `password.request` | Request form |
+| `POST /forgot-password` | `password.email` | Send reset link (via `MAIL_MAILER`, default `log`) |
+| `GET /reset-password/{token}` | `password.reset` | New password form |
+| `POST /reset-password` | `password.store` | Update password |
 
-## Password Reset
+All under `guest` middleware.
 
-**Routes:** `GET/POST /forgot-password`, `GET/POST /reset-password/{token}`  
-**Controllers:** `Auth\PasswordResetLinkController`, `Auth\NewPasswordController`  
-**Views:** `auth/forgot-password.blade.php`, `auth/reset-password.blade.php`
+## Email verification — scaffolded, not enforced
 
-Standard Laravel Breeze password reset flow using the `password_reset_tokens` table. The mail driver defaults to `log` in the example environment, so reset emails appear in `storage/logs/laravel.log` during development.
+Routes exist (`verification.notice`, `verification.verify` with `signed`+`throttle:6,1`, `verification.send`), but:
 
----
+- `User` does **not** implement `MustVerifyEmail` (the `use` statement is commented out in `app/Models/User.php`).
+- No route uses the `verified` middleware.
+- `ProfileController@update` still nulls `email_verified_at` when the email changes.
 
-## Email Verification
+Verification emails are effectively dead code unless `MustVerifyEmail` is restored.
 
-**Routes:** `GET /verify-email`, `GET /verify-email/{id}/{hash}`, `POST /email/verification-notification`  
-**Controllers:** `Auth\EmailVerificationPromptController`, `Auth\VerifyEmailController`, `Auth\EmailVerificationNotificationController`
+## Confirm password & password update
 
-The routes and controllers are present (from Breeze scaffold), but the `User` model does **not** implement `MustVerifyEmail` (the interface is commented out). Email verification is therefore **not enforced**.
+- `GET/POST /confirm-password` — `password.confirm` (standard Breeze password confirmation for sensitive actions).
+- `PUT /password` — `password.update` → `PasswordController` (current-password validated).
 
----
+## Profile management
 
-## Profile Management
+See routes `profile.edit` / `profile.update` / `profile.destroy`:
 
-**Routes:** `GET/PATCH/DELETE /profile`  
-**Controller:** `ProfileController`  
-**Middleware:** `auth`  
-**Views:** `profile/edit.blade.php`, `profile/partials/*`
+- **Edit** (`GET /profile`) — name + email via `ProfileUpdateRequest` (email unique ignoring self, lowercase). Changing email resets `email_verified_at`.
+- **Delete** (`DELETE /profile`) — requires `password` confirmed via `current_password` rule in `userDeletion` error bag; logs out, deletes user, invalidates session.
 
-### Update Profile Information
+## Dependencies on other modules
 
-- Uses `ProfileUpdateRequest` with rules: `name` (required, max:255) and `email` (required, lowercase, unique ignoring own ID).
-- If the email changes, `email_verified_at` is reset to `null`.
-
-### Change Password
-
-- Validated with `current_password` rule to confirm the existing password.
-- New password must satisfy `Password::defaults()` and be confirmed.
-
-### Delete Account
-
-- Requires the current password via `userDeletion` error bag.
-- Logs out the user, deletes the `User` record, invalidates the session.
-
----
-
-## Current Limitations
-
-- No email notification is sent when a teacher account is approved or rejected. The teacher must attempt to log in to discover their status.
-- Email verification infrastructure exists but is not activated.
-- The `role` default in the migration is `'user'`, but registration always creates `'teacher'`. A user with `role = 'user'` and `status = 'approved'` can log in but would have no admin access and no different UX from a teacher. This edge case is not expected in normal operation.
+- Approval status is consumed by `AdminMiddleware` (admin area) and `LoginRequest` (all logins).
+- `attendances.marked_by` references `users.id` — deleting a user nulls the marker.
+- `AdminSeeder` is the only built-in way to create an admin.

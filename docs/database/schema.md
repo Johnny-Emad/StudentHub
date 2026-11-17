@@ -1,182 +1,122 @@
-# Database Schema Reference
+# Database Schema
 
-All column definitions are sourced directly from the migration files. Data types reflect MySQL equivalents for the declared Eloquent/Blueprint types. MySQL 8.0+ is the supported database engine.
-
-> **Known migration issue:** `students.notes` is defined in `2026_11_03_182612_create_students_table.php` and added again by `2026_11_16_223616_add_notes_to_students_table.php`. On a fresh database, the second migration will fail with a duplicate-column error. Databases migrated before the notes column was added to the create migration are unaffected.
-
----
+Column-level reference reconstructed from the migration files. Types are the Laravel schema-builder types; the MySQL equivalents are noted where they differ.
 
 ## `users`
 
-Migration: `0001_01_01_000000_create_users_table.php`
+Authentication accounts for admins and teachers. Created by `0001_01_01_000000_create_users_table`.
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|:---:|---|---|
-| `id` | BIGINT UNSIGNED | No | auto-increment | Primary key |
-| `name` | VARCHAR(255) | No | — | Full display name |
-| `email` | VARCHAR(255) | No | — | Unique |
-| `email_verified_at` | TIMESTAMP | Yes | NULL | Email verification timestamp |
-| `password` | VARCHAR(255) | No | — | Bcrypt hashed |
-| `role` | VARCHAR(255) | No | `'user'` | Actual values: `'teacher'`, `'admin'` |
-| `status` | VARCHAR(255) | No | `'pending'` | Values: `'pending'`, `'approved'`, `'rejected'` |
-| `remember_token` | VARCHAR(100) | Yes | NULL | Laravel remember-me token |
-| `created_at` | TIMESTAMP | Yes | NULL | |
-| `updated_at` | TIMESTAMP | Yes | NULL | |
+| Column | Type | Nullable | Default | Constraints |
+|---|---|---|---|---|
+| `id` | bigint unsigned (PK, auto-increment) | no | — | primary key |
+| `name` | varchar(255) | no | — | |
+| `email` | varchar(255) | no | — | **unique** |
+| `email_verified_at` | timestamp | yes | null | |
+| `password` | varchar(255) | no | — | hashed (cast) |
+| `role` | varchar(255) | no | `'user'` | values used: `admin`, `teacher`, `user` |
+| `status` | varchar(255) | no | `'pending'` | values used: `pending`, `approved`, `rejected` |
+| `remember_token` | varchar(100) | yes | null | |
+| `created_at` / `updated_at` | timestamp | yes | null | |
 
 **Notes:**
-- The default `role` value in the migration is `'user'`, but `RegisteredUserController` always creates accounts with `role = 'teacher'`. Admin accounts are seeded with `role = 'admin'`.
-- The `email_verified_at` column exists but `MustVerifyEmail` is commented out in the User model, so email verification is not enforced.
-
----
+- `role` and `status` are plain strings — there is no enum or check constraint; validity is enforced only in application code.
+- Registration always writes `role='teacher'`, `status='pending'` (`RegisteredUserController`).
+- `UserFactory` does **not** set `role`/`status`, so factory users get DB defaults `user`/`pending` — relevant to the stale test suite (see [testing/test-coverage.md](../testing/test-coverage.md)).
 
 ## `students`
 
-Migration: `2026_11_03_182612_create_students_table.php`
+The student registry. Created by `2026_11_03_182612_create_students_table` (+ duplicate `notes` migration).
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|:---:|---|---|
-| `id` | BIGINT UNSIGNED | No | auto-increment | Primary key |
-| `student_code` | VARCHAR(255) | No | — | Unique; manually assigned |
-| `first_name` | VARCHAR(255) | No | — | |
-| `last_name` | VARCHAR(255) | No | — | |
-| `email` | VARCHAR(255) | Yes | NULL | Nullable; uniqueness enforced by application validation only (no DB constraint) |
-| `phone` | VARCHAR(255) | Yes | NULL | Validated as 11 digits |
-| `date_of_birth` | DATE | Yes | NULL | Must be ≤ today |
-| `gender` | VARCHAR(255) | Yes | NULL | Values: `'male'`, `'female'` |
-| `address` | TEXT | Yes | NULL | Max 1000 characters |
-| `grade` | TINYINT UNSIGNED | No | — | Grade level 1–12 (`unsignedTinyInteger`); validated `integer|between:1,12` |
-| `class_section` | VARCHAR(1) | No | — | Single uppercase letter; validated `size:1` + `regex:/^[A-Z]$/` |
-| `status` | VARCHAR(255) | No | `'active'` | Values: `'active'`, `'inactive'` |
-| `notes` | TEXT | Yes | NULL | Free-text notes; added by `2026_11_16_223616_add_notes_to_students_table.php` (also present in the create migration — see note above) |
-| `created_at` | TIMESTAMP | Yes | NULL | |
-| `updated_at` | TIMESTAMP | Yes | NULL | |
+| Column | Type | Nullable | Default | Constraints |
+|---|---|---|---|---|
+| `id` | bigint unsigned (PK) | no | — | |
+| `student_code` | varchar(255) | no | — | **unique** |
+| `first_name` | varchar(255) | no | — | |
+| `last_name` | varchar(255) | no | — | |
+| `email` | varchar(255) | yes | null | **unique** (MySQL allows multiple NULLs) |
+| `phone` | varchar(255) | yes | null | validation: exactly 11 digits |
+| `date_of_birth` | date | yes | null | validation: `before_or_equal:today` |
+| `gender` | varchar(255) | yes | null | validation: `male`/`female` |
+| `address` | text | yes | null | validation: max 1000 chars |
+| `grade` | **unsignedTinyInteger** | no | — | validation: integer 1–12 |
+| `class_section` | **char(1)** | no | — | validation: single uppercase A–Z |
+| `status` | varchar(255) | no | `'active'` | validation: `active`/`inactive` |
+| `notes` | text | yes | null | defined in **both** create and add migrations |
+| `created_at` / `updated_at` | timestamp | yes | null | |
 
-**Indexes** (from `2026_11_17_000000_add_performance_indexes.php`): `grade`, `class_section`, `status`, `(grade, class_section)`
-
-**Note on `email`:** the column is nullable and has **no unique constraint at the database level**. `StudentController` enforces uniqueness via validation (`unique:students,email`, ignoring the current record on update), so duplicates are prevented by the application, not the schema.
-
----
+**Indexes** (from `2026_11_17_000000_add_performance_indexes`): `grade`, `class_section`, `status`, and composite `(grade, class_section)`.
 
 ## `attendances`
 
-Migration: `2026_11_09_132450_create_attendances_table.php`
+One record per student per day. Created by `2026_11_09_132450_create_attendances_table`.
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|:---:|---|---|
-| `id` | BIGINT UNSIGNED | No | auto-increment | Primary key |
-| `student_id` | BIGINT UNSIGNED | No | — | FK → `students.id`, cascadeOnDelete |
-| `date` | DATE | No | — | Attendance date |
-| `status` | ENUM | No | — | Values: `'present'`, `'absent'` |
-| `marked_by` | BIGINT UNSIGNED | Yes | NULL | FK → `users.id`, nullOnDelete |
-| `created_at` | TIMESTAMP | Yes | NULL | |
-| `updated_at` | TIMESTAMP | Yes | NULL | |
+| Column | Type | Nullable | Default | Constraints |
+|---|---|---|---|---|
+| `id` | bigint unsigned (PK) | no | — | |
+| `student_id` | bigint unsigned (FK) | no | — | → `students.id`, **cascadeOnDelete** |
+| `date` | date | no | — | |
+| `status` | **enum('present','absent')** | no | — | MySQL enum; no default |
+| `marked_by` | bigint unsigned (FK) | yes | null | → `users.id`, **nullOnDelete** |
+| `created_at` / `updated_at` | timestamp | yes | null | |
 
-**Unique constraint:** `(student_id, date)`
-
-**Indexes** (from `2026_11_17_000000_add_performance_indexes.php`): `date`, `status`
-
----
+**Constraints:** `unique(student_id, date)` — one attendance record per student per day.
+**Indexes:** `date`, `status` (performance migration).
 
 ## `subjects`
 
-Migration: `2026_11_09_193355_create_subjects_table.php`
+Subject catalogue. Created by `2026_11_09_193355_create_subjects_table`.
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|:---:|---|---|
-| `id` | BIGINT UNSIGNED | No | auto-increment | Primary key |
-| `name` | VARCHAR(255) | No | — | Unique |
-| `description` | TEXT | Yes | NULL | |
-| `created_at` | TIMESTAMP | Yes | NULL | |
-| `updated_at` | TIMESTAMP | Yes | NULL | |
-
----
+| Column | Type | Nullable | Default | Constraints |
+|---|---|---|---|---|
+| `id` | bigint unsigned (PK) | no | — | |
+| `name` | varchar(255) | no | — | **unique** |
+| `description` | text | yes | null | |
+| `created_at` / `updated_at` | timestamp | yes | null | |
 
 ## `grade_subject`
 
-Migration: `2026_11_09_193416_create_grade_subjects_table.php`
+Pivot mapping subjects to grade levels. Table name is singular `grade_subject` (set explicitly via `GradeSubject::$table`). Created by `2026_11_09_193416_create_grade_subjects_table`.
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|:---:|---|---|
-| `id` | BIGINT UNSIGNED | No | auto-increment | Primary key |
-| `subject_id` | BIGINT UNSIGNED | No | — | FK → `subjects.id`, cascadeOnDelete |
-| `grade` | VARCHAR(255) | No | — | Grade string matching `students.grade` values |
-| `created_at` | TIMESTAMP | Yes | NULL | |
-| `updated_at` | TIMESTAMP | Yes | NULL | |
+| Column | Type | Nullable | Default | Constraints |
+|---|---|---|---|---|
+| `id` | bigint unsigned (PK) | no | — | |
+| `subject_id` | bigint unsigned (FK) | no | — | → `subjects.id`, **cascadeOnDelete** |
+| `grade` | **varchar(255)** | no | — | stores grade as string (e.g. `'1'`–`'12'`) |
+| `created_at` / `updated_at` | timestamp | yes | null | |
 
-**Unique constraint:** `(subject_id, grade)`
-
-**Note:** This table is not a standard many-to-many pivot. It is an independent model (`GradeSubject`) with its own `id` and timestamps.
-
----
+**Constraints:** `unique(subject_id, grade)`.
 
 ## `exams`
 
-Migrations: `2026_11_09_195725_create_exams_table.php` + `2026_11_12_164107_fix_missing_columns_in_exams_table.php`
+Exam definitions. Created by `2026_11_09_195725_create_exams_table`; the `2026_11_12` migration adds defensive `hasColumn` guards (no-ops on clean installs).
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|:---:|---|---|
-| `id` | BIGINT UNSIGNED | No | auto-increment | Primary key |
-| `subject_id` | BIGINT UNSIGNED | No | — | FK → `subjects.id`, cascadeOnDelete |
-| `title` | VARCHAR(255) | No | — | Exam title |
-| `grade` | VARCHAR(255) | No | — | Targets this grade level |
-| `class_section` | VARCHAR(10) | No | — | Targets this class section |
-| `exam_date` | DATE | No | — | Scheduled exam date |
-| `total_marks` | DECIMAL(8,2) | No | 100 | Maximum achievable marks |
-| `created_at` | TIMESTAMP | Yes | NULL | |
-| `updated_at` | TIMESTAMP | Yes | NULL | |
+| Column | Type | Nullable | Default | Constraints |
+|---|---|---|---|---|
+| `id` | bigint unsigned (PK) | no | — | |
+| `subject_id` | bigint unsigned (FK) | no* | — | → `subjects.id`, **cascadeOnDelete** (*nullable only in the defensive migration path) |
+| `title` | varchar(255) | no* | — | |
+| `grade` | varchar(255) | no* | — | stored as **string** |
+| `class_section` | varchar(10) | no* | — | wider than `students.class_section` char(1) |
+| `exam_date` | date | no* | — | |
+| `total_marks` | decimal(8,2) | no | `100` | validation: numeric, >0, ≤999999.99 |
+| `created_at` / `updated_at` | timestamp | yes | null | |
 
-**Indexes:** `(grade, class_section)`, `exam_date`
-
-**Note:** The fix migration (`2026_11_12_164107`) re-adds all columns with `if (!Schema::hasColumn(...))` guards. This was needed because earlier schema state may have been missing these columns in some environments.
-
----
+**Indexes:** `(grade, class_section)` composite, `exam_date`.
 
 ## `exam_grades`
 
-Migration: `2026_11_09_214149_create_exam_grades_table.php`
+Marks per student per exam. Created by `2026_11_09_214149_create_exam_grades_table`.
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|:---:|---|---|
-| `id` | BIGINT UNSIGNED | No | auto-increment | Primary key |
-| `exam_id` | BIGINT UNSIGNED | No | — | FK → `exams.id`, cascadeOnDelete |
-| `student_id` | BIGINT UNSIGNED | No | — | FK → `students.id`, cascadeOnDelete |
-| `marks_obtained` | DECIMAL(8,2) | No | — | Must be between 0 and `exam.total_marks` |
-| `created_at` | TIMESTAMP | Yes | NULL | |
-| `updated_at` | TIMESTAMP | Yes | NULL | |
+| Column | Type | Nullable | Default | Constraints |
+|---|---|---|---|---|
+| `id` | bigint unsigned (PK) | no | — | |
+| `exam_id` | bigint unsigned (FK) | no | — | → `exams.id`, **cascadeOnDelete** |
+| `student_id` | bigint unsigned (FK) | no | — | → `students.id`, **cascadeOnDelete** |
+| `marks_obtained` | decimal(8,2) | no | — | validation: 0 ≤ marks ≤ `exams.total_marks` |
+| `created_at` / `updated_at` | timestamp | yes | null | |
 
-**Unique constraint:** `(exam_id, student_id)`
+**Constraints:** `unique(exam_id, student_id)` — one grade per student per exam; `ExamGradeController` uses `upsert` on this pair.
 
----
+## Framework tables
 
-## Laravel System Tables
-
-### `password_reset_tokens`
-
-| Column | Type | Notes |
-|---|---|---|
-| `email` | VARCHAR(255) | Primary key |
-| `token` | VARCHAR(255) | |
-| `created_at` | TIMESTAMP | Nullable |
-
-### `sessions`
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | VARCHAR(255) | Primary key |
-| `user_id` | BIGINT UNSIGNED | Nullable, indexed |
-| `ip_address` | VARCHAR(45) | Nullable |
-| `user_agent` | TEXT | Nullable |
-| `payload` | LONGTEXT | |
-| `last_activity` | INTEGER | Indexed |
-
-### `cache`, `cache_locks`
-
-Created by `0001_01_01_000001_create_cache_table.php`. Used because `CACHE_STORE=database` in `.env.example`; the dashboard and statistics controllers use `Cache::remember()`.
-
-### `jobs`, `job_batches`, `failed_jobs`
-
-Created by `0001_01_01_000002_create_jobs_table.php`. Present because `QUEUE_CONNECTION=database`; no application jobs are currently dispatched.
-
-### `migrations`
-
-Standard Laravel migration tracking table.
+`password_reset_tokens` (email PK, token, created_at), `sessions` (id PK, user_id index, ip, user_agent, payload, last_activity), `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`, `migrations` — all standard Laravel, created by the `0001_01_01_*` migrations.
