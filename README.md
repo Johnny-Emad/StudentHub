@@ -95,7 +95,7 @@ Schools that rely on paper records or disconnected spreadsheets face recurring p
 | Language | PHP 8.3 |
 | Framework | Laravel 13.17 |
 | Authentication | Laravel Breeze (session-based) |
-| Database | SQLite (default), compatible with any PDO driver |
+| Database | MySQL 8.0+ (any PDO-compatible database is supported) |
 | ORM | Eloquent |
 | Frontend | Blade templating, Tailwind CSS v3, Alpine.js v3 |
 | Build Tool | Vite 8 with `laravel-vite-plugin` |
@@ -118,7 +118,7 @@ Browser Request
   Controller (validates input, queries models, returns view)
       │
       ▼
-  Eloquent Model ──► SQLite database
+  Eloquent Model ──► MySQL database
       │
       ▼
   Blade View (rendered HTML returned to browser)
@@ -176,7 +176,8 @@ See [docs/database/database-overview.md](docs/database/database-overview.md) and
 
 ## Installation Requirements
 
-- PHP 8.3 or higher with extensions: `pdo`, `pdo_sqlite`, `mbstring`, `xml`, `ctype`, `json`, `tokenizer`, `openssl`
+- PHP 8.3 or higher with extensions: `pdo`, `pdo_mysql`, `mbstring`, `xml`, `ctype`, `json`, `tokenizer`, `openssl`
+- MySQL 8.0+ server (or compatible)
 - Composer 2.x
 - Node.js 18+ and npm 9+
 - Git
@@ -216,8 +217,13 @@ Open `.env` and review the following values before running migrations:
 APP_NAME=StudentHub
 APP_URL=http://localhost:8000
 
-# SQLite is the default — no changes required for local development
-DB_CONNECTION=sqlite
+# MySQL connection — update credentials to match your local setup
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=studenthub
+DB_USERNAME=root
+DB_PASSWORD=
 
 # Mail is set to 'log' driver by default; emails appear in storage/logs/laravel.log
 MAIL_MAILER=log
@@ -230,8 +236,8 @@ No external service credentials are required for local development.
 ## Database Setup
 
 ```bash
-# Create the SQLite file (already exists in repo; re-create if needed)
-touch database/database.sqlite
+# Create the MySQL database (if it does not already exist)
+mysql -u root -p -e "CREATE DATABASE studenthub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # Run all migrations
 php artisan migrate
@@ -372,7 +378,7 @@ docs/
 
 - **No email notifications** — teacher approval/rejection does not send an email; the teacher must attempt to log in again to discover their status.
 - **Admin seeder only** — there is no UI to promote a user to admin; it must be done via the `AdminSeeder` or directly in the database.
-- **SQLite default** — SQLite works for development and small deployments but is not suitable for concurrent production workloads.
+- **MySQL required** — the application is configured for MySQL; SQLite is not supported out of the box.
 - **Static dashboard change indicators** — the percentage change badges on the dashboard ("+12%", "+5%", etc.) are hardcoded, not calculated from real historical data.
 - **No file uploads** — student profiles have no photo field or document attachment capability.
 - **No notifications system** — there is no in-app notification mechanism for any event.
