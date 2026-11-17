@@ -1,6 +1,6 @@
 # Database Schema Reference
 
-All column definitions are sourced directly from the migration files. Data types reflect SQLite equivalents for the declared Eloquent/Blueprint types.
+All column definitions are sourced directly from the migration files. Data types reflect MySQL equivalents for the declared Eloquent/Blueprint types.
 
 ---
 

@@ -1,6 +1,6 @@
 # Database Overview
 
-StudentHub uses SQLite as its default database driver. The schema is managed entirely through Laravel migrations. No stored procedures, triggers, or views are used.
+StudentHub uses MySQL as its database. The schema is managed entirely through Laravel migrations. No stored procedures, triggers, or views are used.
 
 ---
 

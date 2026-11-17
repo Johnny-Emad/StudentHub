@@ -88,7 +88,7 @@ graph TD
     AdminMW["admin Middleware\n(AdminMiddleware.php)"]
     Controllers["Controllers"]
     Models["Eloquent Models"]
-    DB["SQLite Database"]
+    DB["MySQL Database"]
     Blade["Blade Views\n(resources/views/)"]
 
     Browser -->|HTTP Request| Router
