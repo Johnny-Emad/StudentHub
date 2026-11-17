@@ -126,7 +126,7 @@ Browser Request
   Blade View (rendered HTML returned to browser)
 ```
 
-See [docs/architecture/system-architecture.md](docs/architecture/system-architecture.md) for the full architecture document with Mermaid diagrams.
+See [docs/architecture/system-overview.md](docs/architecture/system-overview.md) and [docs/architecture/application-architecture.md](docs/architecture/application-architecture.md) for the full architecture documentation.
 
 ---
 
@@ -144,7 +144,7 @@ The application defines seven business tables, plus the standard Laravel system 
 | `exams` | Exam definitions (subject, grade, class section, date, total marks) |
 | `exam_grades` | Individual student marks per exam |
 
-See [docs/database/database-overview.md](docs/database/database-overview.md), [docs/database/schema.md](docs/database/schema.md), and [docs/database/erd.md](docs/database/erd.md) for complete schema documentation and ER diagrams.
+See [docs/database/database-overview.md](docs/database/database-overview.md), [docs/database/schema.md](docs/database/schema.md), [docs/database/erd.md](docs/database/erd.md), and [docs/database/relationships.md](docs/database/relationships.md) for complete schema documentation.
 
 ---
 
@@ -152,13 +152,13 @@ See [docs/database/database-overview.md](docs/database/database-overview.md), [d
 
 | Module | Documentation |
 |---|---|
-| Authentication & Approval | [docs/modules/authentication.md](docs/modules/authentication.md) |
-| Teacher Management | [docs/modules/teacher-management.md](docs/modules/teacher-management.md) |
+| Authentication | [docs/modules/authentication.md](docs/modules/authentication.md) |
+| User Management | [docs/modules/user-management.md](docs/modules/user-management.md) |
+| Teacher Approval | [docs/modules/teacher-approval.md](docs/modules/teacher-approval.md) |
 | Student Management | [docs/modules/student-management.md](docs/modules/student-management.md) |
 | Subject Management | [docs/modules/subject-management.md](docs/modules/subject-management.md) |
 | Attendance | [docs/modules/attendance.md](docs/modules/attendance.md) |
-| Exams | [docs/modules/exams.md](docs/modules/exams.md) |
-| Exam Grades | [docs/modules/exam-grades.md](docs/modules/exam-grades.md) |
+| Examinations & Exam Grades | [docs/modules/examinations.md](docs/modules/examinations.md) |
 | Statistics Dashboards | [docs/modules/statistics.md](docs/modules/statistics.md) |
 
 ---
@@ -287,7 +287,7 @@ php artisan db:seed
 
 `DatabaseSeeder` calls `AdminSeeder`, `SubjectSeeder`, `TeacherSeeder`, `StudentSeeder`, `ExamSeeder`, `ExamGradeSeeder`, and `AttendanceSeeder`. `StudentSeeder`, `ExamSeeder`, `ExamGradeSeeder`, and `AttendanceSeeder` skip themselves if their tables already contain data.
 
-See [docs/setup/configuration.md](docs/setup/configuration.md) for seeder details.
+See [docs/getting-started/configuration.md](docs/getting-started/configuration.md) for seeder details.
 
 > **Security note:** `AdminSeeder` contains a hardcoded password and a personal email address. Change both before deploying to any shared or production environment, and consider rotating the credentials if this repository has ever been public.
 
@@ -386,34 +386,41 @@ Full technical documentation is located in the [`docs/`](docs/) directory:
 
 ```
 docs/
-├── README.md                          — Documentation index
+├── README.md                              — Documentation index
+├── getting-started/
+│   ├── installation.md                    — Prerequisites through first run
+│   ├── configuration.md                   — Environment variables, seeders, cache keys
+│   └── troubleshooting.md                 — Common failures and fixes
 ├── architecture/
-│   ├── system-architecture.md         — MVC architecture + Mermaid diagrams
-│   └── request-lifecycle.md           — Traced request lifecycle example
+│   ├── system-overview.md                 — Purpose, roles, module map
+│   ├── application-architecture.md        — MVC layers, middleware, authorization model
+│   ├── request-lifecycle.md               — Traced request walkthrough
+│   └── project-structure.md               — Annotated repository map
 ├── database/
-│   ├── database-overview.md           — All tables, columns, constraints
-│   ├── schema.md                      — Column-by-column schema reference
-│   └── erd.md                         — Mermaid ER diagram
+│   ├── database-overview.md               — Engine support, table inventory
+│   ├── schema.md                          — Column-by-column schema reference
+│   ├── erd.md                             — Mermaid ER diagram
+│   ├── relationships.md                   — Eloquent relations & delete behavior
+│   └── database-design-decisions.md       — Design rationale & inconsistencies
 ├── modules/
 │   ├── authentication.md
-│   ├── teacher-management.md
+│   ├── user-management.md
+│   ├── teacher-approval.md
 │   ├── student-management.md
 │   ├── subject-management.md
 │   ├── attendance.md
-│   ├── exams.md
-│   ├── exam-grades.md
+│   ├── examinations.md
 │   └── statistics.md
-├── workflows/
-│   ├── authentication-flow.md
-│   ├── teacher-approval-flow.md
-│   ├── student-management-flow.md
-│   ├── attendance-flow.md
-│   └── examination-flow.md
-├── routes/
-│   └── route-reference.md             — Full route table
-└── setup/
-    ├── installation.md
-    └── configuration.md
+├── backend/
+│   ├── models.md
+│   ├── controllers.md
+│   ├── middleware.md
+│   ├── validation.md
+│   └── routes.md                          — Complete route table
+├── testing/
+│   ├── testing-overview.md
+│   └── test-coverage.md
+└── project-status.md                      — Implemented vs. broken vs. planned
 ```
 
 ---
