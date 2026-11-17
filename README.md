@@ -1,5 +1,18 @@
 # StudentHub
 
+<p align="center">
+  <img src="screenshots/3.png" alt="StudentHub dashboard preview" width="900">
+</p>
+
+<p align="center">
+  <a href="https://laravel.com"><img src="https://img.shields.io/badge/Laravel-13-FF2D20?logo=laravel&logoColor=white" alt="Laravel 13"></a>
+  <a href="https://www.php.net"><img src="https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white" alt="PHP 8.3"></a>
+  <a href="https://www.mysql.com"><img src="https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white" alt="MySQL 8.0"></a>
+  <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 3"></a>
+  <a href="https://pestphp.com"><img src="https://img.shields.io/badge/Tests-PestPHP_4-C21325?logo=pestphp&logoColor=white" alt="PestPHP 4"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License"></a>
+</p>
+
 A web-based school management system built with Laravel 13, designed to help teachers and administrators manage students, attendance, subjects, exams, and academic performance analytics from a single platform.
 
 ---
@@ -165,7 +178,79 @@ See [docs/database/database-overview.md](docs/database/database-overview.md), [d
 
 ## Screenshots
 
-> Screenshots are not currently included. The following sections describe what each major view presents.
+### Authentication
+
+The sign-in page welcomes users with an overview of the platform's capabilities.
+
+<p align="center">
+  <img src="screenshots/1.png" alt="StudentHub sign-in page" width="720">
+</p>
+
+### Main Views
+
+**Dashboard** — Student count cards (total, active, inactive, grade levels), quick actions, and a recent students list.
+
+<p align="center">
+  <img src="screenshots/3.png" alt="StudentHub dashboard" width="900">
+</p>
+
+**Students** — Paginated student registry with search and grade/section/status filters.
+
+<p align="center">
+  <img src="screenshots/4.png" alt="Student management index" width="900">
+</p>
+
+**Attendance** — Date-based attendance sheet with present/absent toggles per student.
+
+<p align="center">
+  <img src="screenshots/5.png" alt="Daily attendance marking" width="900">
+</p>
+
+### Administration
+
+**Teacher Approvals** — Admin review queue for pending teacher registration requests.
+
+<p align="center">
+  <img src="screenshots/6.png" alt="Teacher approvals page" width="900">
+</p>
+
+**Subjects** — Subject catalogue management with grade-level assignments.
+
+<p align="center">
+  <img src="screenshots/7.png" alt="Subject management" width="900">
+</p>
+
+**Exams** — Exam management across subjects, grades, and class sections.
+
+<p align="center">
+  <img src="screenshots/8.png" alt="Exam management" width="900">
+</p>
+
+### Statistics Dashboards
+
+**School Statistics** — School-wide summary with optional date-range filtering.
+
+<p align="center">
+  <img src="screenshots/9.png" alt="School-wide statistics" width="900">
+</p>
+
+**Class Statistics** — Performance breakdown per class.
+
+<p align="center">
+  <img src="screenshots/10.png" alt="Class-level statistics" width="900">
+</p>
+
+<p align="center">
+  <img src="screenshots/11.png" alt="Class-level statistics detail" width="900">
+</p>
+
+**Subject Statistics** — Exam coverage and grade performance per subject.
+
+<p align="center">
+  <img src="screenshots/12.png" alt="Subject-level statistics" width="900">
+</p>
+
+### View Reference
 
 | View | Description |
 |---|---|
