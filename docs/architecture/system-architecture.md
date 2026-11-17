@@ -47,6 +47,7 @@ Controllers handle one concern each. Validation is performed inline using `$requ
 | `ExamController` | Exam CRUD, target student preview |
 | `ExamGradeController` | Bulk grade entry, individual grade edit |
 | `Admin\TeacherApprovalController` | List pending teachers, approve, reject |
+| `DashboardController` | Main dashboard statistics (cached for 60 seconds) |
 | `ClassStatisticsController` | Per-class aggregate statistics |
 | `GradeStatisticsController` | Per-grade aggregate statistics |
 | `SchoolStatisticsController` | School-wide statistics with optional date range |

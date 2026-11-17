@@ -1,12 +1,16 @@
 # Database Overview
 
-StudentHub uses MySQL as its database. The schema is managed entirely through Laravel migrations. No stored procedures, triggers, or views are used.
+StudentHub uses **MySQL 8.0+** as its database — it is the officially supported and configured engine (`DB_CONNECTION=mysql` in `.env.example`). The schema is managed entirely through Laravel migrations. No stored procedures, triggers, or views are used.
+
+> **Note on SQLite:** SQLite is configured only for the automated test suite (`phpunit.xml` uses an in-memory SQLite database). It is not a supported development or production database for this application.
 
 ---
 
 ## Tables Summary
 
-| Table | Rows / Purpose |
+### Application tables
+
+| Table | Purpose |
 |---|---|
 | `users` | Application user accounts (teachers and admins) |
 | `students` | Student records (the core entity of the system) |
@@ -15,10 +19,18 @@ StudentHub uses MySQL as its database. The schema is managed entirely through La
 | `grade_subject` | Pivot — which grade levels a subject applies to |
 | `exams` | Exam definitions scoped to a subject, grade, and class section |
 | `exam_grades` | Individual student mark per exam |
+
+### Laravel system tables
+
+Created by the framework migrations (`0001_01_01_*`, `0001_01_01_000001`, `0001_01_01_000002`) and not used by application business logic:
+
+| Table | Purpose |
+|---|---|
+| `migrations` | Tracks which migrations have run |
 | `password_reset_tokens` | Laravel's built-in password reset token store |
-| `sessions` | Laravel database session storage |
-| `cache` | Laravel cache store |
-| `jobs` | Laravel job queue |
+| `sessions` | Database session storage (`SESSION_DRIVER=database`) |
+| `cache`, `cache_locks` | Database cache store (`CACHE_STORE=database`) |
+| `jobs`, `job_batches`, `failed_jobs` | Database queue tables (`QUEUE_CONNECTION=database`) |
 
 ---
 
@@ -41,9 +53,9 @@ Exam (1) ──────── (N) ExamGrade
 
 ### Key Design Decisions
 
-**Grade as a string** — `grade` is stored as a plain `string` column in `students`, `exams`, `grade_subject`, and `attendances` (via student). This avoids a separate grades/year-groups table but means grade values are never enforced by a foreign key; they are instead validated against existing student data at the application layer.
+**Mixed grade types** — `students.grade` is an `unsignedTinyInteger` (validated as an integer between 1 and 12), while `exams.grade` and `grade_subject.grade` are `string` columns that store the grade number as text (e.g., `"5"`). MySQL coerces the types during comparisons, and the application validates grade values against real student data rather than a foreign key. There is no dedicated grades/year-groups table.
 
-**Class section as a single character** — `class_section` is validated as `size:1` in `StudentController` (single uppercase letter such as "A", "B"). The `exams` table uses `max:10` allowing slightly longer values, but the cross-validation ensures that `class_section` values used in exams actually exist in the students table for that grade.
+**Class section as a single character** — `students.class_section` is a `VARCHAR(1)` validated as a single uppercase letter (`size:1`, `regex:/^[A-Z]$/`). `exams.class_section` is `VARCHAR(10)`, but exam validation requires the value to exist in `students.class_section` for the chosen grade.
 
 **No teacher–student assignment** — there is no direct relationship between a `User` (teacher) and specific students or classes. Any approved user can mark attendance for any student.
 
@@ -67,7 +79,7 @@ Exam (1) ──────── (N) ExamGrade
 | Table | Unique columns |
 |---|---|
 | `users` | `email` |
-| `students` | `student_code`, `email` (nullable unique) |
+| `students` | `student_code` only — `email` is **nullable with no database unique constraint**; uniqueness is enforced at the application layer by `StudentController` validation |
 | `subjects` | `name` |
 | `attendances` | `(student_id, date)` — prevents duplicate attendance records for the same student on the same day |
 | `exam_grades` | `(exam_id, student_id)` — prevents recording two marks for the same student in the same exam |
@@ -77,9 +89,15 @@ Exam (1) ──────── (N) ExamGrade
 
 ## Indexes
 
-| Table | Index columns | Purpose |
-|---|---|---|
-| `exams` | `(grade, class_section)` | Fast lookup of exams by class |
-| `exams` | `exam_date` | Fast date-range filtering |
-| `sessions` | `user_id` | Laravel session lookup |
-| `sessions` | `last_activity` | Session garbage collection |
+| Table | Index columns | Source migration | Purpose |
+|---|---|---|---|
+| `exams` | `(grade, class_section)` | `create_exams_table` | Fast lookup of exams by class |
+| `exams` | `exam_date` | `create_exams_table` | Fast date-range filtering |
+| `students` | `grade` | `add_performance_indexes` | Filtering and statistics |
+| `students` | `class_section` | `add_performance_indexes` | Filtering and statistics |
+| `students` | `status` | `add_performance_indexes` | Status filtering |
+| `students` | `(grade, class_section)` | `add_performance_indexes` | Composite class lookup |
+| `attendances` | `date` | `add_performance_indexes` | Date-range filtering |
+| `attendances` | `status` | `add_performance_indexes` | Status aggregation |
+| `sessions` | `user_id` | `create_users_table` | Laravel session lookup |
+| `sessions` | `last_activity` | `create_users_table` | Session garbage collection |

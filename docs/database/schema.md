@@ -1,6 +1,8 @@
 # Database Schema Reference
 
-All column definitions are sourced directly from the migration files. Data types reflect MySQL equivalents for the declared Eloquent/Blueprint types.
+All column definitions are sourced directly from the migration files. Data types reflect MySQL equivalents for the declared Eloquent/Blueprint types. MySQL 8.0+ is the supported database engine.
+
+> **Known migration issue:** `students.notes` is defined in `2026_11_03_182612_create_students_table.php` and added again by `2026_11_16_223616_add_notes_to_students_table.php`. On a fresh database, the second migration will fail with a duplicate-column error. Databases migrated before the notes column was added to the create migration are unaffected.
 
 ---
 
@@ -37,16 +39,21 @@ Migration: `2026_11_03_182612_create_students_table.php`
 | `student_code` | VARCHAR(255) | No | — | Unique; manually assigned |
 | `first_name` | VARCHAR(255) | No | — | |
 | `last_name` | VARCHAR(255) | No | — | |
-| `email` | VARCHAR(255) | Yes | NULL | Nullable unique |
+| `email` | VARCHAR(255) | Yes | NULL | Nullable; uniqueness enforced by application validation only (no DB constraint) |
 | `phone` | VARCHAR(255) | Yes | NULL | Validated as 11 digits |
 | `date_of_birth` | DATE | Yes | NULL | Must be ≤ today |
 | `gender` | VARCHAR(255) | Yes | NULL | Values: `'male'`, `'female'` |
 | `address` | TEXT | Yes | NULL | Max 1000 characters |
-| `grade` | VARCHAR(255) | No | — | String grade level (e.g., "5", "Grade 10") |
-| `class_section` | VARCHAR(10) | No | — | Validated as single character (e.g., "A", "B") |
+| `grade` | TINYINT UNSIGNED | No | — | Grade level 1–12 (`unsignedTinyInteger`); validated `integer|between:1,12` |
+| `class_section` | VARCHAR(1) | No | — | Single uppercase letter; validated `size:1` + `regex:/^[A-Z]$/` |
 | `status` | VARCHAR(255) | No | `'active'` | Values: `'active'`, `'inactive'` |
+| `notes` | TEXT | Yes | NULL | Free-text notes; added by `2026_11_16_223616_add_notes_to_students_table.php` (also present in the create migration — see note above) |
 | `created_at` | TIMESTAMP | Yes | NULL | |
 | `updated_at` | TIMESTAMP | Yes | NULL | |
+
+**Indexes** (from `2026_11_17_000000_add_performance_indexes.php`): `grade`, `class_section`, `status`, `(grade, class_section)`
+
+**Note on `email`:** the column is nullable and has **no unique constraint at the database level**. `StudentController` enforces uniqueness via validation (`unique:students,email`, ignoring the current record on update), so duplicates are prevented by the application, not the schema.
 
 ---
 
@@ -65,6 +72,8 @@ Migration: `2026_11_09_132450_create_attendances_table.php`
 | `updated_at` | TIMESTAMP | Yes | NULL | |
 
 **Unique constraint:** `(student_id, date)`
+
+**Indexes** (from `2026_11_17_000000_add_performance_indexes.php`): `date`, `status`
 
 ---
 
@@ -160,6 +169,14 @@ Migration: `2026_11_09_214149_create_exam_grades_table.php`
 | `payload` | LONGTEXT | |
 | `last_activity` | INTEGER | Indexed |
 
-### `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`
+### `cache`, `cache_locks`
 
-Standard Laravel cache and queue tables. Not used by application business logic.
+Created by `0001_01_01_000001_create_cache_table.php`. Used because `CACHE_STORE=database` in `.env.example`; the dashboard and statistics controllers use `Cache::remember()`.
+
+### `jobs`, `job_batches`, `failed_jobs`
+
+Created by `0001_01_01_000002_create_jobs_table.php`. Present because `QUEUE_CONNECTION=database`; no application jobs are currently dispatched.
+
+### `migrations`
+
+Standard Laravel migration tracking table.

@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-The following diagram represents all application-defined tables and their relationships. Laravel system tables (`cache`, `jobs`, `sessions`, `password_reset_tokens`) are omitted for clarity.
+The following diagram represents all application-defined tables and their relationships. Laravel system tables (`cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`, `sessions`, `password_reset_tokens`, `migrations`) are omitted for clarity.
 
 ---
 
@@ -31,9 +31,10 @@ erDiagram
         date date_of_birth
         string gender
         text address
-        string grade
+        tinyint grade
         string class_section
         string status
+        text notes
         timestamp created_at
         timestamp updated_at
     }

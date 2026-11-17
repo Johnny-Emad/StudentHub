@@ -21,8 +21,10 @@ A web-based school management system built with Laravel 13, designed to help tea
 - [Environment Configuration](#environment-configuration)
 - [Database Setup](#database-setup)
 - [How to Run the Project](#how-to-run-the-project)
+- [Testing](#testing)
 - [Project Structure](#project-structure)
 - [Documentation](#documentation)
+- [Troubleshooting](#troubleshooting)
 - [Known Limitations](#known-limitations)
 - [Future Improvements](#future-improvements)
 - [License](#license)
@@ -95,7 +97,7 @@ Schools that rely on paper records or disconnected spreadsheets face recurring p
 | Language | PHP 8.3 |
 | Framework | Laravel 13.17 |
 | Authentication | Laravel Breeze (session-based) |
-| Database | MySQL 8.0+ (any PDO-compatible database is supported) |
+| Database | MySQL 8.0+ (officially supported; SQLite is used only by the automated test suite) |
 | ORM | Eloquent |
 | Frontend | Blade templating, Tailwind CSS v3, Alpine.js v3 |
 | Build Tool | Vite 8 with `laravel-vite-plugin` |
@@ -130,19 +132,19 @@ See [docs/architecture/system-architecture.md](docs/architecture/system-architec
 
 ## Database Overview
 
-The application uses seven tables:
+The application defines seven business tables, plus the standard Laravel system tables (`migrations`, `sessions`, `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`, `password_reset_tokens`):
 
 | Table | Purpose |
 |---|---|
 | `users` | Teacher and admin accounts with role and approval status |
-| `students` | Student records (personal info, grade, class section, status) |
+| `students` | Student records (personal info, grade, class section, status, notes) |
 | `attendances` | Daily attendance records per student |
 | `subjects` | Subject catalogue |
 | `grade_subject` | Maps which subjects are assigned to which grade levels |
 | `exams` | Exam definitions (subject, grade, class section, date, total marks) |
 | `exam_grades` | Individual student marks per exam |
 
-See [docs/database/database-overview.md](docs/database/database-overview.md) and [docs/database/erd.md](docs/database/erd.md) for complete schema documentation and ER diagrams.
+See [docs/database/database-overview.md](docs/database/database-overview.md), [docs/database/schema.md](docs/database/schema.md), and [docs/database/erd.md](docs/database/erd.md) for complete schema documentation and ER diagrams.
 
 ---
 
@@ -157,6 +159,7 @@ See [docs/database/database-overview.md](docs/database/database-overview.md) and
 | Attendance | [docs/modules/attendance.md](docs/modules/attendance.md) |
 | Exams | [docs/modules/exams.md](docs/modules/exams.md) |
 | Exam Grades | [docs/modules/exam-grades.md](docs/modules/exam-grades.md) |
+| Statistics Dashboards | [docs/modules/statistics.md](docs/modules/statistics.md) |
 
 ---
 
@@ -186,26 +189,47 @@ See [docs/database/database-overview.md](docs/database/database-overview.md) and
 
 ## Installation Instructions
 
+### Prerequisites
+
+- PHP 8.3+ with `pdo_mysql`, `mbstring`, `xml`, `ctype`, `json`, `tokenizer`, `openssl`
+- MySQL 8.0+ server **running** before migrations are executed
+- Composer 2.x
+- Node.js 18+ and npm
+- Git
+
+### Steps (cross-platform)
+
 ```bash
-# 1. Clone the repository
-git clone <repository-url> StudentHub
+git clone https://github.com/Johnny-Emad/StudentHub.git
 cd StudentHub
 
-# 2. Install PHP dependencies
 composer install
 
-# 3. Copy the environment file
-cp .env.example .env
+cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 
-# 4. Generate application key
 php artisan key:generate
+php artisan config:clear
 
-# 5. Install Node dependencies
 npm install
-
-# 6. Build frontend assets
 npm run build
 ```
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/Johnny-Emad/StudentHub.git
+cd StudentHub
+
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+php artisan config:clear
+
+npm install
+npm run build
+```
+
+Then create the database and run migrations (see [Database Setup](#database-setup)) and start the server with `php artisan serve`.
 
 ---
 
@@ -214,10 +238,11 @@ npm run build
 Open `.env` and review the following values before running migrations:
 
 ```dotenv
-APP_NAME=StudentHub
+APP_NAME=StudentHub          # .env.example ships with APP_NAME=Laravel — change it
 APP_URL=http://localhost:8000
 
-# MySQL connection — update credentials to match your local setup
+# MySQL connection — the officially supported database.
+# Update DB_USERNAME / DB_PASSWORD to match your local MySQL setup.
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -229,11 +254,17 @@ DB_PASSWORD=
 MAIL_MAILER=log
 ```
 
-No external service credentials are required for local development.
+Notes:
+
+- `DB_PASSWORD` is empty in `.env.example` for convenience; set a real password if your MySQL user has one.
+- `config/database.php` falls back to the `sqlite` connection only if `DB_CONNECTION` is not set at all. The supported and tested configuration is MySQL via `.env`.
+- No external service credentials are required for local development.
 
 ---
 
 ## Database Setup
+
+MySQL must be running before migrations execute.
 
 ```bash
 # Create the MySQL database (if it does not already exist)
@@ -241,14 +272,24 @@ mysql -u root -p -e "CREATE DATABASE studenthub CHARACTER SET utf8mb4 COLLATE ut
 
 # Run all migrations
 php artisan migrate
-
-# Seed the admin account
-php artisan db:seed --class=AdminSeeder
 ```
 
-After seeding, the admin account is available. See [docs/setup/configuration.md](docs/setup/configuration.md) for seeder details.
+Then choose a seeding option:
 
-> **Security note:** The `AdminSeeder` contains a hardcoded password. Change this before deploying to any shared environment.
+```bash
+# Option A — admin account only (recommended for development)
+php artisan db:seed --class=AdminSeeder
+
+# Option B — full demo dataset (admin + 50 teachers + 10,000 students
+# + subjects, exams, grades, and attendance). This is heavy and slow.
+php artisan db:seed
+```
+
+`DatabaseSeeder` calls `AdminSeeder`, `SubjectSeeder`, `TeacherSeeder`, `StudentSeeder`, `ExamSeeder`, `ExamGradeSeeder`, and `AttendanceSeeder`. `StudentSeeder`, `ExamSeeder`, `ExamGradeSeeder`, and `AttendanceSeeder` skip themselves if their tables already contain data.
+
+See [docs/setup/configuration.md](docs/setup/configuration.md) for seeder details.
+
+> **Security note:** `AdminSeeder` contains a hardcoded password and a personal email address. Change both before deploying to any shared or production environment, and consider rotating the credentials if this repository has ever been public.
 
 ---
 
@@ -264,7 +305,9 @@ npm run dev
 
 The application will be accessible at `http://localhost:8000`.
 
-To run as a single command using the Laravel `dev` script:
+If you already ran `npm run build`, `php artisan serve` alone is enough — the built assets are served from `public/build`.
+
+To run server + queue + logs + Vite together using Laravel's `dev` script:
 
 ```bash
 composer run dev
@@ -307,10 +350,9 @@ StudentHub/
 │   └── Providers/
 │       └── AppServiceProvider.php
 ├── database/
-│   ├── migrations/               # 10 migration files
-│   └── seeders/
-│       ├── AdminSeeder.php
-│       └── DatabaseSeeder.php
+│   ├── migrations/               # 12 migration files
+│   ├── factories/                # Model factories for all entities
+│   └── seeders/                  # AdminSeeder, DatabaseSeeder + 6 demo-data seeders
 ├── resources/
 │   ├── css/app.css               # Tailwind + custom component classes
 │   ├── js/app.js
@@ -331,7 +373,8 @@ StudentHub/
 │   ├── auth.php
 │   ├── console.php
 │   └── web.php
-├── docs/                         # Full documentation suite
+├── docs/                         # Full documentation suite (see below)
+├── tests/                        # PestPHP feature and unit tests
 └── bootstrap/app.php             # Middleware aliases registered here
 ```
 
@@ -358,7 +401,8 @@ docs/
 │   ├── subject-management.md
 │   ├── attendance.md
 │   ├── exams.md
-│   └── exam-grades.md
+│   ├── exam-grades.md
+│   └── statistics.md
 ├── workflows/
 │   ├── authentication-flow.md
 │   ├── teacher-approval-flow.md
@@ -374,15 +418,47 @@ docs/
 
 ---
 
+## Testing
+
+The test suite uses PestPHP v4 with `RefreshDatabase` on every feature test.
+
+```bash
+php artisan test          # or: composer test
+```
+
+`phpunit.xml` configures tests to run against an **in-memory SQLite** database (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`), independent of the MySQL database used in development. The suite currently covers the Breeze authentication and profile flows; there are no feature tests for students, attendance, exams, or statistics yet.
+
+---
+
+## Troubleshooting
+
+| Problem | Likely cause | Fix |
+|---|---|---|
+| `SQLSTATE[HY000] [2002] Connection refused` | MySQL server is not running, or wrong host/port | Start MySQL (XAMPP, MySQL service, Docker). Verify `DB_HOST`/`DB_PORT` in `.env`. |
+| `SQLSTATE[HY000] [1045] Access denied` | Wrong `DB_USERNAME`/`DB_PASSWORD` | Check credentials with `mysql -u <user> -p`. Update `.env`, then `php artisan config:clear`. |
+| `SQLSTATE[HY000] [1049] Unknown database 'studenthub'` | Database not created | Run the `CREATE DATABASE` command in [Database Setup](#database-setup). |
+| `php artisan migrate` fails with duplicate column | `2026_11_16_223616_add_notes_to_students_table` adds `notes`, which already exists in `create_students_table` on a fresh install | Known issue — see [Known Limitations](#known-limitations). On an existing database where `notes` was added later, migrations run normally. |
+| Blank/unstyled pages after `composer install` | Frontend assets not built | Run `npm install && npm run build` (or `npm run dev` for hot reload). |
+| `Vite manifest not found` | `public/build` missing | Run `npm run build`. |
+| `500` errors / missing `storage` permissions | `storage/` or `bootstrap/cache` not writable | Ensure the web server user can write to `storage/` and `bootstrap/cache`. On Windows, check folder permissions. |
+| Changes to `.env` have no effect | Config cache | Run `php artisan config:clear` (or `php artisan config:cache` in production). |
+| Login says "waiting for admin approval" | New teacher accounts start as `pending` | Approve the account via `/admin/teachers` as an admin, or approve directly in the `users` table. |
+| `Class 'Pdo\Mysql' not found` / driver errors | PHP MySQL extensions missing | Enable `pdo_mysql` (and `mysqlnd`) in `php.ini` and restart the web server. |
+
+---
+
 ## Known Limitations
 
+- **MySQL 8.0+ is the supported database.** `DB_CONNECTION=mysql` in `.env` is the tested configuration. SQLite is used only for the automated test suite (`phpunit.xml`) and is not a supported development database.
 - **No email notifications** — teacher approval/rejection does not send an email; the teacher must attempt to log in again to discover their status.
 - **Admin seeder only** — there is no UI to promote a user to admin; it must be done via the `AdminSeeder` or directly in the database.
-- **MySQL required** — the application is configured for MySQL; SQLite is not supported out of the box.
 - **Static dashboard change indicators** — the percentage change badges on the dashboard ("+12%", "+5%", etc.) are hardcoded, not calculated from real historical data.
 - **No file uploads** — student profiles have no photo field or document attachment capability.
 - **No notifications system** — there is no in-app notification mechanism for any event.
 - **Email verification is scaffolded but not enforced** — the `MustVerifyEmail` interface on `User` is commented out.
+- **Duplicate `notes` migration** — `students.notes` is defined both in `create_students_table` and re-added by `add_notes_to_students_table`; a fresh `php artisan migrate` on an empty database may fail on the second migration.
+- **`composer.json` leftover script** — `post-create-project-cmd` still creates `database/database.sqlite`, a remnant of the Laravel skeleton; it does not affect normal installs but is misleading.
+- **Hardcoded admin credentials in `AdminSeeder`** — see the security note in [Database Setup](#database-setup).
 
 ---
 
@@ -401,4 +477,4 @@ docs/
 
 ## License
 
-This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+`composer.json` declares the project under the [MIT license](https://opensource.org/licenses/MIT). Note that no `LICENSE` file is currently included in the repository root — adding one is recommended for clarity.

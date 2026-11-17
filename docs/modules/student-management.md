@@ -51,9 +51,10 @@ The view also receives dynamic `$grades` and `$sections` arrays derived from dis
 | `date_of_birth` | nullable, date, before_or_equal:today |
 | `gender` | nullable, in:male,female |
 | `address` | nullable, string, max:1000 |
-| `grade` | required, string, max:50 |
-| `class_section` | required, string, size:1 |
+| `grade` | required, integer, between:1,12 |
+| `class_section` | required, string, size:1, regex:/^[A-Z]$/ |
 | `status` | required, in:active,inactive |
+| `notes` | nullable, string, max:5000 |
 
 ### `update(Request $request, Student $student)` — Validation Rules
 
@@ -84,7 +85,7 @@ class Student extends Model
 }
 ```
 
-Fillable fields: `student_code`, `first_name`, `last_name`, `email`, `phone`, `date_of_birth`, `gender`, `address`, `grade`, `class_section`, `status`.
+Fillable fields: `student_code`, `first_name`, `last_name`, `email`, `phone`, `date_of_birth`, `gender`, `address`, `grade`, `class_section`, `status`, `notes`.
 
 ---
 
@@ -105,7 +106,7 @@ See [database/schema.md](../database/schema.md#students) for the full column ref
 
 Key constraints:
 - `student_code` is unique — the application does not auto-generate it; users enter it manually.
-- `email` is nullable but unique when provided.
+- `email` is nullable; uniqueness is enforced by validation only (there is no database-level unique constraint on `students.email`).
 - `class_section` is validated as a single character at the application level.
 
 ---
@@ -124,4 +125,4 @@ Key constraints:
 - No student photo or document upload.
 - No bulk import (CSV or spreadsheet).
 - Deleting a student is irreversible and silently removes all historical attendance and exam grade data.
-- `grade` is a free-text string with no predefined list; inconsistent grade entry (e.g., "5" vs "Grade 5") would create separate filter options.
+- `grade` is stored as an integer (1–12) in `students`, but as a string in `exams` and `grade_subject`. The mixed types rely on MySQL's implicit type coercion and application-level validation.
