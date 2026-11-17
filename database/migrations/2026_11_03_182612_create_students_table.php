@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('class_section', 1);
 
             $table->string('status')->default('active');
-
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }
