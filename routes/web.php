@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Admin\SchoolSettingController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\AcademicYearController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\AttendanceController;
@@ -60,6 +61,15 @@ Route::middleware('auth')->group(function () {
         ->prefix('admin')
         ->name('admin.')
         ->group(function () {
+
+            // Academic Years
+            Route::resource('academic-years', AcademicYearController::class)
+                ->except(['show']);
+
+            Route::patch(
+                'academic-years/{academicYear}/activate',
+                [AcademicYearController::class, 'activate']
+            )->name('academic-years.activate');
 
             // School Settings
             Route::get('/school-settings', [SchoolSettingController::class, 'edit'])
