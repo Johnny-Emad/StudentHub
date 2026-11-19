@@ -9,6 +9,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // Dashboard statistics
         $dashboardStats = Cache::remember('dashboard.stats', 60, function () {
             return [
                 'total' => Student::count(),
@@ -18,9 +19,18 @@ class DashboardController extends Controller
             ];
         });
 
-        $recentStudents = Cache::remember('dashboard.recent_students', 60, function () {
-            return Student::latest()->take(5)->get();
+        // Cache recent student IDs instead of Eloquent Collection
+        $recentStudentIds = Cache::remember('dashboard.recent_student_ids', 60, function () {
+            return Student::latest()
+                ->take(5)
+                ->pluck('id')
+                ->toArray();
         });
+
+        // Retrieve students from database
+        $recentStudents = Student::whereIn('id', $recentStudentIds)
+            ->latest()
+            ->get();
 
         return view('dashboard', compact('dashboardStats', 'recentStudents'));
     }
