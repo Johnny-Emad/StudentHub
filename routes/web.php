@@ -1,8 +1,8 @@
-
 <?php
 
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\Admin\SchoolSettingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentController;
@@ -61,6 +61,13 @@ Route::middleware('auth')->group(function () {
         ->name('admin.')
         ->group(function () {
 
+            // School Settings
+            Route::get('/school-settings', [SchoolSettingController::class, 'edit'])
+                ->name('school-settings.edit');
+
+            Route::put('/school-settings', [SchoolSettingController::class, 'update'])
+                ->name('school-settings.update');
+
             // Teacher Approval
             Route::get('/teachers', [TeacherApprovalController::class, 'index'])
                 ->name('teachers.index');
@@ -75,7 +82,6 @@ Route::middleware('auth')->group(function () {
                 [TeacherApprovalController::class, 'reject']
             )->name('teachers.reject');
 
-            // Combined update route used by the view
             Route::patch(
                 '/teachers/{user}/{status}',
                 [TeacherApprovalController::class, 'update']
